@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.Setter;
 
 @Data
-public abstract class Updatable{
+public abstract class Updatable {
 	
 	@Setter(AccessLevel.NONE)
 	private UUID ownerID;
