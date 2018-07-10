@@ -27,60 +27,6 @@ public class Client extends Updater {
 		updateAllToServer();
 	}
 
-	private void updateAllToServer() {
-		for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
-			UUID id = entry.getKey();
-			Updatable updatable = entry.getValue();
-			
-			for (Field field : updatable.getClass().getDeclaredFields()) {
-				
-				if (field.isAnnotationPresent(ClientToServer.class)) {
-					field.setAccessible(true);
-					
-					try {
-						Object value = field.get(updatable);
-
-						serverConnection.send(new Update(id, field.getName(), value));
-					}
-					catch (IllegalArgumentException e) {
-						e.printStackTrace();
-					}
-					catch (IllegalAccessException e) {
-						e.printStackTrace();
-					}
-				}
-			}
-		}
-	}
-
-	private void updateAllFromServer() {
-		for (Update update : serverConnection.poll()) {
-			
-			UUID updatableID = update.getObjectID();
-			String fieldID = update.getFieldID();
-			Object newValue = update.getValue();
-			
-			Updatable updatable = updatables.get(updatableID);
-			if (updatable == null) {
-				updatable = new Updatable(serverConnection.getOtherEndId());
-				updatables.put(updatableID, updatable);
-			}
-			
-			try {
-				Field field = updatable.getClass().getDeclaredField(fieldID);
-				field.setAccessible(true);
-				
-				field.set(updatable, newValue);
-			}
-			catch (NoSuchFieldException e) {
-				e.printStackTrace();
-			}
-			catch (IllegalAccessException e) {
-				e.printStackTrace();
-			}
-		}
-	}
-
 	private void updateAllLocal(final float dt) {
 		for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
 			entry.getValue().updateOnClient(dt);
