@@ -3,10 +3,13 @@ package net.cbaakman.occupy.network;
 import java.util.Collection;
 import java.util.UUID;
 
-public interface Connection {
+public class Connection {
 
-	void send(Update update);
-	Collection<Update> poll();
+	void send(Message message) {
+	}
+	Collection<Message> poll() {
+	}
 	
-	UUID getOtherEndId();
+	UUID getOtherEndId() {
+	}
 }
