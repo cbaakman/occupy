@@ -36,25 +36,27 @@ public abstract class Updater {
 		
 		List<Update> updates = new ArrayList<Update>();
 		
-		for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
-			UUID objectId = entry.getKey();
-			Updatable updatable = entry.getValue();
-			
-			Class<? extends Updatable> objectClass = updatable.getClass();
-			
-			for (Field field : objectClass.getDeclaredFields()) {
+		synchronized(updatables) {
+			for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
+				UUID objectId = entry.getKey();
+				Updatable updatable = entry.getValue();
 				
-				if (field.isAnnotationPresent(annotationClass)) {
+				Class<? extends Updatable> objectClass = updatable.getClass();
+				
+				for (Field field : objectClass.getDeclaredFields()) {
 					
-					field.setAccessible(true);
-			
-					try {
-						Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
+					if (field.isAnnotationPresent(annotationClass)) {
 						
-						updates.add(update);
-						
-					} catch (IllegalArgumentException | IllegalAccessException e) {
-						e.printStackTrace();
+						field.setAccessible(true);
+				
+						try {
+							Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
+							
+							updates.add(update);
+							
+						} catch (IllegalArgumentException | IllegalAccessException e) {
+							e.printStackTrace();
+						}
 					}
 				}
 			}
@@ -63,20 +65,28 @@ public abstract class Updater {
 		return updates;
 	}
 	
-	protected void processUpdateWith(Update update, Class<? extends Annotation> annotationClass) {
+	protected void processUpdateWith(Update update, Class<? extends Annotation> annotationClass, UUID originId) {
 		
-		Updatable updatable = updatables.get(update.getObjectID());
+		Updatable updatable;
+		synchronized(updatables) {
+			updatable = updatables.get(update.getObjectID());
+		}
+			
 		if (updatable == null) {
 			try {
 				updatable = update.getObjectClass().newInstance();
 				
-				updatables.put(update.getObjectID(), updatable);
-				
+				synchronized(updatables) {
+					updatables.put(update.getObjectID(), updatable);
+				}
 			} catch (InstantiationException | IllegalAccessException e) {
 				e.printStackTrace();
 				return;
 			}
 		}
+		
+		if (!updatable.getOwnerId().equals(originId))
+			return;
 		
 		try {
 			Field field = update.getObjectClass().getField(update.getFieldID());
