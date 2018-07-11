@@ -10,10 +10,10 @@ import lombok.Setter;
 public abstract class Updatable {
 	
 	@Setter(AccessLevel.NONE)
-	private UUID ownerID;
+	private UUID ownerId;
 	
-	protected Updatable(UUID ownerID) {
-		this.ownerID = ownerID;
+	protected Updatable(UUID ownerId) {
+		this.ownerId = ownerId;
 	}
 	
 	public void updateOnClient(final float dt) {
