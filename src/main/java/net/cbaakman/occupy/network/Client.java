@@ -11,6 +11,8 @@ import java.util.UUID;
 
 import net.cbaakman.occupy.config.Config;
 import net.cbaakman.occupy.network.annotations.ClientToServer;
+import net.cbaakman.occupy.network.annotations.ServerToClient;
+import net.cbaakman.occupy.network.enums.MessageType;
 
 public class Client extends Updater {
 	
@@ -25,6 +27,19 @@ public class Client extends Updater {
 		updateAllFromServer();
 		updateAllLocal(dt);
 		updateAllToServer();
+	}
+
+	private void updateAllToServer() {
+		for (Update update : getUpdatesWith(ClientToServer.class)) {
+			serverConnection.send(new Message(MessageType.UPDATE, update));
+		}
+	}
+
+	private void updateAllFromServer() {
+		for (Message message : serverConnection.poll()) {
+			if (message.getType().equals(MessageType.UPDATE))
+				processUpdateWith((Update)message.getData(), ServerToClient.class);
+		}
 	}
 
 	private void updateAllLocal(final float dt) {
