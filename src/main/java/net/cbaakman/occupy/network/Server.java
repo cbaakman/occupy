@@ -57,7 +57,8 @@ public class Server extends Updater {
 				}
 
 				if (message.getType().equals(MessageType.UPDATE))
-					processUpdateWith((Update)message.getData(), ClientToServer.class, clientRecord.getId());
+					processUpdateWith((Update)message.getData(), ClientToServer.class, clientRecord.getId(),
+									  false);
 			}
 		};
 	}

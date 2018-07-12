@@ -65,7 +65,8 @@ public abstract class Updater {
 		return updates;
 	}
 	
-	protected void processUpdateWith(Update update, Class<? extends Annotation> annotationClass, UUID originId) {
+	protected void processUpdateWith(Update update, Class<? extends Annotation> annotationClass, UUID originId,
+									 boolean createUpdatables) {
 		
 		Updatable updatable;
 		synchronized(updatables) {

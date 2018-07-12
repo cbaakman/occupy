@@ -38,7 +38,7 @@ public class Client extends Updater {
 	private void updateAllFromServer() {
 		for (Message message : serverConnection.poll()) {
 			if (message.getType().equals(MessageType.UPDATE))
-				processUpdateWith((Update)message.getData(), ServerToClient.class);
+				processUpdateWith((Update)message.getData(), ServerToClient.class, true);
 		}
 	}
 
