@@ -1,4 +1,4 @@
-package net.cbaakman.occupy.network;
+package net.cbaakman.occupy;
 
 import java.util.UUID;
 
