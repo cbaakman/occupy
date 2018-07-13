@@ -19,6 +19,9 @@ import net.cbaakman.occupy.Message;
 import net.cbaakman.occupy.Updatable;
 import net.cbaakman.occupy.Update;
 import net.cbaakman.occupy.config.Config;
+import net.cbaakman.occupy.errors.CommunicationError;
+import net.cbaakman.occupy.errors.ErrorHandler;
+import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.network.annotations.ClientToServer;
 import net.cbaakman.occupy.network.annotations.ServerToClient;
 import net.cbaakman.occupy.network.enums.MessageType;
@@ -29,11 +32,13 @@ public class NetworkClient extends Client {
 	private UDPMessenger udpMessenger;
 	private boolean running;
 	
-	public NetworkClient(Address serverAddress) {
+	public NetworkClient(ErrorHandler errorHandler, Address serverAddress) {
+		super(errorHandler);
+		
 		this.serverAddress = serverAddress;
 	}
 
-	public void run() {
+	public void run() throws InitError {
 		try {
 			udpMessenger = new UDPMessenger() {
 				@Override
@@ -43,9 +48,14 @@ public class NetworkClient extends Client {
 
 					NetworkClient.this.onMessage(message);
 				}
+
+				@Override
+				void onReceiveError(Exception e) {
+					onCommunicationError(new CommunicationError(e));
+				}
 			};
-		} catch (SocketException e) {
-			e.printStackTrace();
+		} catch (IOException e) {
+			throw new InitError(e);
 		}
 		
 		long ticks0 = System.currentTimeMillis(),
@@ -59,31 +69,45 @@ public class NetworkClient extends Client {
 			
 			update(dt);
 		}
+		
+		try {
+			udpMessenger.disconnect();
+		} catch (IOException e) {
+			// Not supposed to happen
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
 
 	@Override
 	public void connectToServer() {
 		try {			
-			Socket socket = new Socket(serverAddress.getAddress(), serverAddress.getPort());
+			Socket socket = new Socket(serverAddress.getAddress(),
+									   serverAddress.getPort());
 			
 			OutputStream os = socket.getOutputStream();
+			os.write(new byte[] {1,1,1,1,1,0});
 			
 			// .. transfer login data .. //
 			
 			socket.close();
 			
 		} catch (IOException e) {
-			e.printStackTrace();
+			onCommunicationError(new CommunicationError(e));
 		}
 	}
 
 	@Override
 	protected void sendMessage(Message message) {
-		udpMessenger.send(serverAddress, message);
+		try {
+			udpMessenger.send(serverAddress, message);
+		} catch (IOException e) {
+			onCommunicationError(new CommunicationError(e));
+		}
 	}
 
 	@Override
-	protected void shutdown() {
+	protected void stop() {
 		running = false;
 	}
 }

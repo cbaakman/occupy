@@ -6,6 +6,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.Map.Entry;
 
+import net.cbaakman.occupy.errors.CommunicationError;
+import net.cbaakman.occupy.errors.ErrorHandler;
+import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.network.annotations.ClientToServer;
 import net.cbaakman.occupy.network.annotations.ServerToClient;
 import net.cbaakman.occupy.network.enums.MessageType;
@@ -13,8 +16,14 @@ import net.cbaakman.occupy.network.enums.MessageType;
 public abstract class Client {
 
 	private Map<UUID, Updatable> updatables = new HashMap<UUID, Updatable>();
+	
+	private ErrorHandler errorHandler;
+	
+	public Client(ErrorHandler errorHandler) {
+		this.errorHandler = errorHandler;
+	}
 
-	public abstract void run();
+	public abstract void run() throws InitError;
 	
 	public abstract void connectToServer();
 	protected abstract void sendMessage(Message message);
@@ -43,8 +52,9 @@ public abstract class Client {
 					updatables.put(update.getObjectID(), updatable);
 				}
 			} catch (InstantiationException | IllegalAccessException e) {
+				// Must never happen!
 				e.printStackTrace();
-				return;
+				System.exit(1);
 			}
 		}
 		
@@ -58,7 +68,9 @@ public abstract class Client {
 			}
 			
 		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
+			// Must never happen!
 			e.printStackTrace();
+			System.exit(1);
 		}
 	}
 
@@ -87,7 +99,9 @@ public abstract class Client {
 							sendMessage(new Message(MessageType.UPDATE, update));
 							
 						} catch (IllegalArgumentException | IllegalAccessException e) {
+							// Must not happen!
 							e.printStackTrace();
+							System.exit(1);
 						}
 					}
 				}
@@ -95,5 +109,11 @@ public abstract class Client {
 		}
 	}
 	
-	protected abstract void shutdown();
+	protected abstract void stop();
+	
+	protected void onCommunicationError(CommunicationError e) {
+		synchronized(e) {
+			errorHandler.handle(e);
+		}
+	}
 }

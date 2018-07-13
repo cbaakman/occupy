@@ -3,9 +3,13 @@ package net.cbaakman.occupy.network;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,7 +22,11 @@ import net.cbaakman.occupy.Message;
 import net.cbaakman.occupy.Server;
 import net.cbaakman.occupy.Updatable;
 import net.cbaakman.occupy.Update;
+import net.cbaakman.occupy.WhileThread;
 import net.cbaakman.occupy.config.Config;
+import net.cbaakman.occupy.errors.CommunicationError;
+import net.cbaakman.occupy.errors.ErrorHandler;
+import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.network.annotations.ClientToServer;
 import net.cbaakman.occupy.network.annotations.ServerToClient;
 import net.cbaakman.occupy.network.enums.MessageType;
@@ -39,32 +47,43 @@ public class NetworkServer extends Server {
 	private boolean running;
 	private int listenPort;
 	UDPMessenger udpMessenger;
-	ServerSocket tcpSocket;
+	ServerSocketChannel tcpChannel;
 	
-	public NetworkServer(int listenPort) {
+	public NetworkServer(ErrorHandler errorHandler, int listenPort) {
+		super(errorHandler);
 		this.listenPort = listenPort;
 	}
 
-	public void run() {
+	public void run() throws InitError {
 		try {
-			tcpSocket = new ServerSocket(listenPort);
+			tcpChannel = ServerSocketChannel.open();
+			tcpChannel.bind(new InetSocketAddress(listenPort));
+			tcpChannel.configureBlocking(false);
 		} catch (IOException e) {
-			e.printStackTrace();
-			return;
+			throw new InitError(e);
 		}
 		
-		Thread tcpThread = new Thread() {
-			public void run() {
-				while (!Thread.currentThread().isInterrupted()) {
-					try {
-						Socket connectionSocket = tcpSocket.accept();
-
-						Address address = new Address(connectionSocket.getInetAddress(),
-													  connectionSocket.getPort());
+		final boolean listenForConnect = true;
+		
+		WhileThread tcpThread = new WhileThread("tcp-server") {
+			public void repeat() {
+				try {
+					SocketChannel connectionChannel = tcpChannel.accept();
+					
+					if (connectionChannel != null) {
+						InetSocketAddress remoteAddres = (InetSocketAddress)connectionChannel.getRemoteAddress();
+						
+						ByteBuffer buf = ByteBuffer.allocate(8);
+						connectionChannel.read(buf);
+						
+						System.out.println(buf.array());
+						
+						Address address = new Address(remoteAddres.getAddress(),
+													  remoteAddres.getPort());
 						
 						// .. transfer login data over the inputstream .. //
 						
-						connectionSocket.close();
+						connectionChannel.close();
 						
 						UUID clientId;
 						synchronized(clientRecords) {
@@ -74,12 +93,13 @@ public class NetworkServer extends Server {
 						}
 						
 						NetworkServer.this.onClientConnect(clientId);
-					} catch (IOException e) {
-						e.printStackTrace();
 					}
+				} catch (IOException e) {
+					onCommunicationError(new CommunicationError(e));
 				}
 			}
 		};
+		
 		tcpThread.start();
 		
 		try {
@@ -96,10 +116,14 @@ public class NetworkServer extends Server {
 						NetworkServer.this.onMessage(clientRecord.getClientId(), message);
 					}
 				}
+
+				@Override
+				void onReceiveError(Exception e) {
+					onCommunicationError(new CommunicationError(e));
+				}
 			};
-		} catch (SocketException e) {
-			e.printStackTrace();
-			return;
+		} catch (IOException e) {
+			throw new InitError(e);
 		}
 		
 		long ticks0 = System.currentTimeMillis(),
@@ -114,10 +138,26 @@ public class NetworkServer extends Server {
 			update(dt);
 		}
 		
-		tcpThread.interrupt();
+		tcpThread.stopRunning();
+		try {
+			tcpChannel.close();
+		} catch (IOException e) {
+			// Should not happen!
+			e.printStackTrace();
+			System.exit(1);
+		}
+		
+		try {
+			udpMessenger.disconnect();
+		} catch (IOException e) {
+			// Not supposed to happen!
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
 	
-	protected void shutdown() {
+	@Override
+	protected void stop() {
 		running = false;
 	}
 
@@ -137,7 +177,11 @@ public class NetworkServer extends Server {
 		synchronized(clientRecords) {
 			for (Entry<Address, ClientRecord> entry : clientRecords.entrySet()) {
 				if (entry.getValue().equals(clientId))
-					udpMessenger.send(entry.getKey(), message);
+					try {
+						udpMessenger.send(entry.getKey(), message);
+					} catch (IOException e) {
+						onCommunicationError(new CommunicationError(e));
+					}
 			}
 		}
 	}

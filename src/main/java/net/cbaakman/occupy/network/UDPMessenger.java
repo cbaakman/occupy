@@ -8,81 +8,75 @@ import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedByInterruptException;
+import java.nio.channels.DatagramChannel;
 import java.util.UUID;
 
 import javax.annotation.PreDestroy;
 
 import net.cbaakman.occupy.Message;
+import net.cbaakman.occupy.WhileThread;
+import net.cbaakman.occupy.errors.CommunicationError;
 
 public abstract class UDPMessenger {
 
-	private DatagramSocket socket;
-	private Thread listenerThread = new Thread() {
-		public void run() {
-			
-			byte[] data = new byte[2048];
-			DatagramPacket packet = new DatagramPacket(data, data.length);
+	private DatagramChannel channel;
+	private WhileThread listenerThread = new WhileThread("udp-listen") {
+		public void repeat() {
+			ByteBuffer buf = ByteBuffer.allocate(2048);
 			
 			ByteArrayInputStream bais;
 			ObjectInputStream ois;
 			Message message;
-			
-			while (!Thread.currentThread().isInterrupted()) {
-				try {
-					synchronized(socket) {
-						socket.receive(packet);
-					}
-					
-					bais = new ByteArrayInputStream(packet.getData());
+						
+			try {
+				InetSocketAddress address = (InetSocketAddress)channel.receive(buf);
+				if (address != null) {
+					bais = new ByteArrayInputStream(buf.array());
 					ois = new ObjectInputStream(bais);
 					
 					message = (Message)ois.readObject();
-					onReceive(new Address(packet.getAddress(), packet.getPort()), message);
-					
-				} catch (IOException | ClassNotFoundException e) {
-					e.printStackTrace();
+					UDPMessenger.this.onReceive(new Address(address.getAddress(), address.getPort()), message);
 				}
+			} catch (ClassNotFoundException | IOException e) {
+				UDPMessenger.this.onReceiveError(e);
 			}
 		}
 	};
 	
-	public UDPMessenger() throws SocketException {
-		socket = new DatagramSocket();
+	public UDPMessenger() throws IOException {
+		channel = DatagramChannel.open();
+		channel.configureBlocking(false);
 		listenerThread.start();
 	}
 	
-	public UDPMessenger(int listenPort) throws SocketException {
-		socket = new DatagramSocket(listenPort);
+	public UDPMessenger(int listenPort) throws IOException {
+		channel = DatagramChannel.open();
+		channel.configureBlocking(false);
+		channel.bind(new InetSocketAddress(listenPort));
 		listenerThread.start();
 	}
 	
 	abstract void onReceive(Address address, Message message);
+	abstract void onReceiveError(Exception e);
 	
-	void send(Address receiverAddress, Message message) {
-		try {
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		    ObjectOutputStream oos = new ObjectOutputStream(baos);
-		    oos.writeObject(message);
-		    oos.close();
+	void send(Address receiverAddress, Message message) throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+	    ObjectOutputStream oos = new ObjectOutputStream(baos);
+	    oos.writeObject(message);
+	    oos.close();
 
-		    DatagramPacket packet = new DatagramPacket(baos.toByteArray(), baos.size(), receiverAddress.getAddress(), receiverAddress.getPort());
-
-			synchronized(socket) {
-				socket.send(packet);
-			}	
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	    ByteBuffer buf = ByteBuffer.wrap(baos.toByteArray());
+	    channel.send(buf, new InetSocketAddress(receiverAddress.getAddress(),
+	    										receiverAddress.getPort()));
 	}
 
-	@PreDestroy
-	void disconnect() {
-		listenerThread.interrupt();
-		
-		synchronized(socket) {
-			socket.disconnect();
-		}
+	void disconnect() throws IOException {
+		listenerThread.stopRunning();
+		channel.disconnect();
 	}
 }
