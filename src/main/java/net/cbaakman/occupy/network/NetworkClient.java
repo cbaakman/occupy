@@ -19,13 +19,13 @@ import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.Message;
 import net.cbaakman.occupy.Updatable;
 import net.cbaakman.occupy.Update;
+import net.cbaakman.occupy.annotations.ClientToServer;
+import net.cbaakman.occupy.annotations.ServerToClient;
 import net.cbaakman.occupy.config.Config;
+import net.cbaakman.occupy.enums.MessageType;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.network.annotations.ClientToServer;
-import net.cbaakman.occupy.network.annotations.ServerToClient;
-import net.cbaakman.occupy.network.enums.MessageType;
 
 public class NetworkClient extends Client {
 	
@@ -38,8 +38,8 @@ public class NetworkClient extends Client {
 		
 		this.serverAddress = serverAddress;
 	}
-
-	public void run() throws InitError {
+	
+	private void initNetwork() throws InitError {
 		try {
 			udpMessenger = new UDPMessenger() {
 				@Override
@@ -58,6 +58,20 @@ public class NetworkClient extends Client {
 		} catch (IOException e) {
 			throw new InitError(e);
 		}
+	}
+	
+	private void closeNetwork() {
+		try {
+			udpMessenger.disconnect();
+		} catch (IOException e) {
+			// Not supposed to happen
+			e.printStackTrace();
+			System.exit(1);
+		}
+	}
+
+	public void run() throws InitError {
+		initNetwork();
 		
 		long ticks0 = System.currentTimeMillis(),
 			 ticks;
@@ -71,13 +85,7 @@ public class NetworkClient extends Client {
 			update(dt);
 		}
 		
-		try {
-			udpMessenger.disconnect();
-		} catch (IOException e) {
-			// Not supposed to happen
-			e.printStackTrace();
-			System.exit(1);
-		}
+		closeNetwork();
 	}
 
 	@Override

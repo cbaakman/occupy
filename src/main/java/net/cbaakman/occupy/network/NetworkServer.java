@@ -34,37 +34,26 @@ public class NetworkServer extends Server {
 	private boolean running;
 	private int listenPort;
 	UDPMessenger udpMessenger;
-	ServerSocketChannel tcpChannel;
+	TCPServerThread tcpServerThread;
 	
 	public NetworkServer(ErrorHandler errorHandler, int listenPort) {
 		super(errorHandler);
 		this.listenPort = listenPort;
 	}
-
-	public void run() throws InitError {
+	
+	private void initNetwork() throws InitError {
 		try {
-			tcpChannel = ServerSocketChannel.open();
-			tcpChannel.bind(new InetSocketAddress(listenPort));
-			tcpChannel.configureBlocking(false);
-		} catch (IOException e) {
-			throw new InitError(e);
-		}
-		
-		WhileThread tcpThread = new WhileThread("tcp-server") {
-			public void repeat() {
-				try {
-					SocketChannel connectionChannel = tcpChannel.accept();
-					
-					if (connectionChannel != null) {
-						InetSocketAddress remoteAddres = (InetSocketAddress)connectionChannel.getRemoteAddress();
-						
-						ByteBuffer buf = ByteBuffer.allocate(8);
-						connectionChannel.read(buf);
-						
-						Address address = new Address(remoteAddres.getAddress(),
-													  remoteAddres.getPort());
-						
-						// .. transfer login data over the inputstream .. //
+			tcpServerThread = new TCPServerThread(listenPort) {
+
+				@Override
+				protected void onConnectionError(Exception e) {
+					onCommunicationError(new CommunicationError(e));
+				}
+
+				@Override
+				protected void onConnection(Address address, SocketChannel connectionChannel) {
+					try{						
+						// .. transfer login data .. //
 						
 						connectionChannel.close();
 						
@@ -76,14 +65,16 @@ public class NetworkServer extends Server {
 						}
 						
 						NetworkServer.this.onClientConnect(clientId);
+						
+					} catch (IOException e) {
+						onCommunicationError(new CommunicationError(e));
 					}
-				} catch (IOException e) {
-					onCommunicationError(new CommunicationError(e));
 				}
-			}
-		};
-		
-		tcpThread.start();
+			};
+		} catch (IOException e) {
+			throw new InitError(e);
+		}
+		tcpServerThread.start();
 		
 		try {
 			udpMessenger = new UDPMessenger(listenPort) {
@@ -109,6 +100,23 @@ public class NetworkServer extends Server {
 		} catch (IOException e) {
 			throw new InitError(e);
 		}
+	}
+	
+	private void closeNetwork() {
+		tcpServerThread.stopRunning();
+		
+		try {
+			udpMessenger.disconnect();
+		} catch (IOException e) {
+			// Not supposed to happen!
+			e.printStackTrace();
+			System.exit(1);
+		}
+	}
+
+	public void run() throws InitError {
+		
+		initNetwork();
 		
 		long ticks0 = System.currentTimeMillis(),
 			 ticks;
@@ -122,22 +130,7 @@ public class NetworkServer extends Server {
 			update(dt);
 		}
 		
-		tcpThread.stopRunning();
-		try {
-			tcpChannel.close();
-		} catch (IOException e) {
-			// Should not happen!
-			e.printStackTrace();
-			System.exit(1);
-		}
-		
-		try {
-			udpMessenger.disconnect();
-		} catch (IOException e) {
-			// Not supposed to happen!
-			e.printStackTrace();
-			System.exit(1);
-		}
+		closeNetwork();
 	}
 	
 	@Override

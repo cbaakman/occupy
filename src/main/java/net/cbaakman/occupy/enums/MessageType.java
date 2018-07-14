@@ -1,4 +1,4 @@
-package net.cbaakman.occupy.network.enums;
+package net.cbaakman.occupy.enums;
 
 public enum MessageType {
 	PING,

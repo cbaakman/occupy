@@ -6,12 +6,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.Map.Entry;
 
+import net.cbaakman.occupy.annotations.ClientToServer;
+import net.cbaakman.occupy.annotations.ServerToClient;
+import net.cbaakman.occupy.enums.MessageType;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.network.annotations.ClientToServer;
-import net.cbaakman.occupy.network.annotations.ServerToClient;
-import net.cbaakman.occupy.network.enums.MessageType;
 
 public abstract class Client {
 
