@@ -2,6 +2,7 @@ package net.cbaakman.occupy.network;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.Field;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -84,13 +85,20 @@ public class NetworkClient extends Client {
 		try {			
 			Socket socket = new Socket(serverAddress.getAddress(),
 									   serverAddress.getPort());
+			if (socket.isConnected()) {
 			
-			OutputStream os = socket.getOutputStream();
-			os.write(new byte[] {1,1,1,1,1,0});
-			
-			// .. transfer login data .. //
-			
-			socket.close();
+				OutputStream os = socket.getOutputStream();
+				
+				// .. transfer login data .. //
+				
+				socket.close();
+			}
+			else
+				onCommunicationError(
+					new CommunicationError(
+						String.format("not connected to server at %s %d",
+									  serverAddress.getAddress(),
+									  serverAddress.getPort())));
 			
 		} catch (IOException e) {
 			onCommunicationError(new CommunicationError(e));
