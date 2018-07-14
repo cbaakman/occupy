@@ -1,18 +1,11 @@
 package net.cbaakman.occupy.network;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
@@ -20,16 +13,10 @@ import java.util.UUID;
 import lombok.Data;
 import net.cbaakman.occupy.Message;
 import net.cbaakman.occupy.Server;
-import net.cbaakman.occupy.Updatable;
-import net.cbaakman.occupy.Update;
 import net.cbaakman.occupy.WhileThread;
-import net.cbaakman.occupy.config.Config;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.network.annotations.ClientToServer;
-import net.cbaakman.occupy.network.annotations.ServerToClient;
-import net.cbaakman.occupy.network.enums.MessageType;
 
 public class NetworkServer extends Server {
 	
@@ -63,8 +50,6 @@ public class NetworkServer extends Server {
 			throw new InitError(e);
 		}
 		
-		final boolean listenForConnect = true;
-		
 		WhileThread tcpThread = new WhileThread("tcp-server") {
 			public void repeat() {
 				try {
@@ -75,8 +60,6 @@ public class NetworkServer extends Server {
 						
 						ByteBuffer buf = ByteBuffer.allocate(8);
 						connectionChannel.read(buf);
-						
-						System.out.println(buf.array());
 						
 						Address address = new Address(remoteAddres.getAddress(),
 													  remoteAddres.getPort());
@@ -107,6 +90,7 @@ public class NetworkServer extends Server {
 
 				@Override
 				void onReceive(Address senderAddress, Message message) {
+										
 					synchronized(clientRecords) {
 						if (clientRecords.containsKey(senderAddress))
 							return;
