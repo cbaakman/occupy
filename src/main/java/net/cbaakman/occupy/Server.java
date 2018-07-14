@@ -32,8 +32,6 @@ public abstract class Server {
 		synchronized(clientIds) {
 			clientIds.add(clientId);
 		}
-		
-		System.out.println("client connect");
 	}
 	
 	protected abstract void disconnectClient(UUID clientId);
