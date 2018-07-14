@@ -10,7 +10,7 @@ public abstract class WhileThread extends Thread {
 
 	@Override
 	public void run() {
-		running = false;
+		running = true;
 		while (running) {
 			repeat();
 		}
