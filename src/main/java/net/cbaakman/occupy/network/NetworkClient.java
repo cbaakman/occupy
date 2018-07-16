@@ -89,6 +89,9 @@ public class NetworkClient extends Client {
 
 	@Override
 	public void login(Credentials credentials) throws AuthenticationError {
+		if (udpMessenger == null)
+			SeriousErrorHandler.handle(new RuntimeException("client is not running"));
+		
 		try {			
 			Socket socket = new Socket();
 			
@@ -136,9 +139,6 @@ public class NetworkClient extends Client {
 				}
 				else if (response.equals(ResponseType.AUTHENTICATION_ERROR))
 					throw new AuthenticationError();
-				else
-					SeriousErrorHandler.handle(new RuntimeException(
-							String.format("not applicable response: %s", response.name())));
 			}
 			else
 				onCommunicationError(
