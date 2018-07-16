@@ -1,4 +1,4 @@
 package net.cbaakman.occupy.errors;
 
-public class AuthenticationError {
+public class AuthenticationError extends Exception {
 }

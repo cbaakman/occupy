@@ -1,31 +1,28 @@
 package net.cbaakman.occupy.network;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.lang.reflect.Field;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.net.SocketAddress;
+import java.security.InvalidKeyException;
 
-import java.util.UUID;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 import net.cbaakman.occupy.Client;
+import net.cbaakman.occupy.authenticate.Credentials;
 import net.cbaakman.occupy.Message;
-import net.cbaakman.occupy.Updatable;
-import net.cbaakman.occupy.Update;
-import net.cbaakman.occupy.annotations.ClientToServer;
-import net.cbaakman.occupy.annotations.ServerToClient;
-import net.cbaakman.occupy.config.Config;
-import net.cbaakman.occupy.enums.MessageType;
+import net.cbaakman.occupy.errors.AuthenticationError;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
+import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.security.SSLChannel;
 
 public class NetworkClient extends Client {
 	
@@ -39,39 +36,35 @@ public class NetworkClient extends Client {
 		this.serverAddress = serverAddress;
 	}
 	
-	private void initNetwork() throws InitError {
-		try {
-			udpMessenger = new UDPMessenger() {
-				@Override
-				void onReceive(Address address, Message message) {
-					if (!address.getAddress().equals(NetworkClient.this.serverAddress))
-						return;
+	private void initUDP() throws IOException {
+		udpMessenger = new UDPMessenger() {
+			@Override
+			void onReceive(Address address, Message message) {
+				if (!address.getAddress().equals(NetworkClient.this.serverAddress))
+					return;
 
-					NetworkClient.this.onMessage(message);
-				}
+				NetworkClient.this.onMessage(message);
+			}
 
-				@Override
-				void onReceiveError(Exception e) {
-					onCommunicationError(new CommunicationError(e));
-				}
-			};
-		} catch (IOException e) {
-			throw new InitError(e);
-		}
+			@Override
+			void onReceiveError(Exception e) {
+				onCommunicationError(new CommunicationError(e));
+			}
+		};
 	}
 	
-	private void closeNetwork() {
-		try {
-			udpMessenger.disconnect();
-		} catch (IOException e) {
-			// Not supposed to happen
-			e.printStackTrace();
-			System.exit(1);
-		}
+	private void closeUDP() throws IOException, InterruptedException {
+		udpMessenger.disconnect();
 	}
 
 	public void run() throws InitError {
-		initNetwork();
+		try {
+			initUDP();
+		} catch (IOException e) {
+			throw new InitError(e);
+		}
+		
+		onInit();
 		
 		long ticks0 = System.currentTimeMillis(),
 			 ticks;
@@ -81,25 +74,71 @@ public class NetworkClient extends Client {
 		while (running) {
 			ticks = System.currentTimeMillis();
 			dt = (float)(ticks - ticks0) / 1000;
-			
+
 			update(dt);
 		}
+		onShutdown();
 		
-		closeNetwork();
+		try {
+			closeUDP();
+		} catch (IOException | InterruptedException e) {
+			// Should not happen!
+			SeriousErrorHandler.handle(e);
+		}
 	}
 
 	@Override
-	public void connectToServer() {
+	public void login(Credentials credentials) throws AuthenticationError {
 		try {			
-			Socket socket = new Socket(serverAddress.getAddress(),
-									   serverAddress.getPort());
-			if (socket.isConnected()) {
+			Socket socket = new Socket();
 			
-				OutputStream os = socket.getOutputStream();
+			// Must use the same port as udp, for the server to know.
+			socket.bind(new InetSocketAddress(udpMessenger.getPort()));
+			
+			socket.connect(new InetSocketAddress(serverAddress.getAddress(),
+									   			 serverAddress.getPort()), 1000);
+			if (socket.isConnected()) {
+				// Tell the server that we want to log in:
+				ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+				oos.writeObject(RequestType.LOGIN);
+				oos.flush();
 				
-				// .. transfer login data .. //
+				SSLChannel sslChannel = new SSLChannel(socket.getInputStream(), socket.getOutputStream());
+				ByteArrayOutputStream baos = new ByteArrayOutputStream();
+				oos = new ObjectOutputStream(baos);
+				oos.writeObject(credentials);
+				baos.close();
+				oos.close();
+				try {
+					sslChannel.send(baos.toByteArray());
+				} catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException
+						| NoSuchPaddingException e) {
+					// Not supposed to happen!
+					SeriousErrorHandler.handle(e);
+				}
 				
-				socket.close();
+				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+				
+				ResponseType response = null;
+				try {
+					response = (ResponseType)ois.readObject();
+				} catch (ClassNotFoundException e) {
+					// Not supposed to happen!
+					SeriousErrorHandler.handle(e);
+					return;
+				} finally {
+					socket.close();
+				}
+				
+				if (response.equals(ResponseType.OK)) {
+					// Authentication OK
+					return;
+				}
+				else if (response.equals(ResponseType.AUTHENTICATION_ERROR))
+					throw new AuthenticationError();
+				else
+					SeriousErrorHandler.handle(new RuntimeException(
+							String.format("not applicable response: %s", response.name())));
 			}
 			else
 				onCommunicationError(
@@ -114,7 +153,7 @@ public class NetworkClient extends Client {
 	}
 
 	@Override
-	protected void sendMessage(Message message) {
+	public void sendMessage(Message message) {
 		try {
 			udpMessenger.send(serverAddress, message);
 		} catch (IOException e) {
@@ -123,7 +162,7 @@ public class NetworkClient extends Client {
 	}
 
 	@Override
-	protected void stop() {
+	public void stop() {
 		running = false;
 	}
 }

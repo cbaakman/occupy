@@ -64,6 +64,10 @@ public abstract class UDPMessenger {
 	abstract void onReceive(Address address, Message message);
 	abstract void onReceiveError(Exception e);
 	
+	int getPort() {
+		return channel.socket().getLocalPort();
+	}
+	
 	void send(Address receiverAddress, Message message) throws IOException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 	    ObjectOutputStream oos = new ObjectOutputStream(baos);
@@ -75,7 +79,7 @@ public abstract class UDPMessenger {
 	    										receiverAddress.getPort()));
 	}
 
-	void disconnect() throws IOException {
+	void disconnect() throws IOException, InterruptedException {
 		listenerThread.stopRunning();
 		channel.disconnect();
 	}

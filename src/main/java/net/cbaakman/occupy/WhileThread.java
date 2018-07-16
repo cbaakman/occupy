@@ -16,8 +16,9 @@ public abstract class WhileThread extends Thread {
 		}
 	}
 	
-	public void stopRunning() {
+	public void stopRunning() throws InterruptedException {
 		running = false;
+		join();
 	}
 
 	protected abstract void repeat();

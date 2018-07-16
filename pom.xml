@@ -5,16 +5,32 @@
   <version>0.0.1-SNAPSHOT</version>
   <dependencies>
   	<dependency>
-  		<groupId>org.projectlombok</groupId>
-  		<artifactId>lombok</artifactId>
-  		<version>1.16.16</version>
-  		<scope>provided</scope>
+      <groupId>org.projectlombok</groupId>
+  	  <artifactId>lombok</artifactId>
+  	  <version>1.16.16</version>
+  	  <scope>provided</scope>
   	</dependency>
   	<dependency>
-	    <groupId>javax.annotation</groupId>
-	    <artifactId>javax.annotation-api</artifactId>
-	    <version>1.2</version>
+	  <groupId>javax.annotation</groupId>
+	  <artifactId>javax.annotation-api</artifactId>
+	  <version>1.2</version>
 	</dependency>
+    <dependency>
+      <groupId>org.jogamp.gluegen</groupId>
+      <artifactId>gluegen-rt-main</artifactId>
+      <version>2.3.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jogamp.jogl</groupId>
+      <artifactId>jogl-all-main</artifactId>
+      <version>2.3.1</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -27,6 +43,14 @@
           <target>1.8</target>
         </configuration>
       </plugin>
+      <plugin>
+	    <groupId>org.codehaus.mojo</groupId>
+	    <artifactId>exec-maven-plugin</artifactId>
+	    <version>1.2.1</version>
+	    <configuration>
+	      <mainClass>net.cbaakman.occupy.TestRun</mainClass>
+	    </configuration>
+	  </plugin>
     </plugins>
   </build>
 </project>

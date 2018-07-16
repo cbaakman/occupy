@@ -2,6 +2,7 @@ package net.cbaakman.occupy;
 
 import java.net.InetAddress;
 
+import net.cbaakman.occupy.enums.MessageType;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
@@ -9,9 +10,9 @@ import net.cbaakman.occupy.network.Address;
 import net.cbaakman.occupy.network.NetworkClient;
 import net.cbaakman.occupy.network.NetworkServer;
 
-public class Test {
+public class TestRun {
 
-	public static void main(String[] args) throws InterruptedException, CommunicationError {
+	public static void main(String[] args) throws InterruptedException, InitError {
 		
 		final ErrorHandler errorHandler = new ErrorHandler() {
 
@@ -22,9 +23,9 @@ public class Test {
 			}
 		};
 		
-		
-		final Server server = new NetworkServer(errorHandler, 5000);
-		final Client client = new NetworkClient(errorHandler, new Address(InetAddress.getLoopbackAddress(), 5000));
+		int serverPort = 5000;
+		final Server server = new NetworkServer(errorHandler, serverPort);
+		final Client client = new NetworkClient(errorHandler, new Address(InetAddress.getLoopbackAddress(), serverPort));
 		
 		Thread serverThread = new Thread("server") {
 			public void run() {
@@ -37,28 +38,8 @@ public class Test {
 		};
 		serverThread.start();
 		
-		Thread clientThread = new Thread("client") {
-			public void run() {
-				try {
-					client.run();
-				} catch (InitError e) {
-					errorHandler.handle(e);
-				}
-			}
-		};
-		clientThread.start();
-		
-		System.out.println("started");
-		
-		Thread.sleep(1000);
-		
-		client.connectToServer();
-		
-		System.out.println("connected");
+		client.run();
 		
 		server.stop();
-		client.stop();
-		
-		System.out.println("stopped");
 	}
 }

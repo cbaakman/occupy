@@ -10,10 +10,13 @@ import java.util.UUID;
 
 import net.cbaakman.occupy.annotations.ClientToServer;
 import net.cbaakman.occupy.annotations.ServerToClient;
+import net.cbaakman.occupy.authenticate.Credentials;
 import net.cbaakman.occupy.enums.MessageType;
+import net.cbaakman.occupy.errors.AuthenticationError;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
+import net.cbaakman.occupy.errors.SeriousErrorHandler;
 
 public abstract class Server {
 	
@@ -28,21 +31,24 @@ public abstract class Server {
 
 	public abstract void run() throws InitError;
 	
-	protected void onClientConnect(UUID clientId) {
+	protected void onClientLogin(UUID clientId, Credentials credentials) throws AuthenticationError {
+		
+		// For now, always accept the credentials.
+		
 		synchronized(clientIds) {
 			clientIds.add(clientId);
 		}
 	}
 	
-	protected abstract void disconnectClient(UUID clientId);
+	protected abstract void logoutClient(UUID clientId);
 	
 	protected void onMessage(UUID clientId, Message message) {
 
 		if (message.getType().equals(MessageType.UPDATE)) {
 			processUpdate(clientId, (Update)message.getData());
 		}
-		else if (message.getType().equals(MessageType.DISCONNECT)) {	
-			disconnectClient(clientId);
+		else if (message.getType().equals(MessageType.LOGOUT)) {	
+			logoutClient(clientId);
 			synchronized(clientIds) {
 				clientIds.remove(clientId);
 			}
@@ -72,10 +78,10 @@ public abstract class Server {
 				field.set(updatable, update.getValue());
 			}
 			
-		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
+		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException |
+				IllegalAccessException e) {
 			// Must not happen!
-			e.printStackTrace();
-			System.exit(1);
+			SeriousErrorHandler.handle(e);
 		}
 	}
 	
@@ -112,8 +118,7 @@ public abstract class Server {
 									
 								} catch (IllegalArgumentException | IllegalAccessException e) {
 									// Must not happen!
-									e.printStackTrace();
-									System.exit(1);
+									SeriousErrorHandler.handle(e);
 								}
 							}
 						}
@@ -123,7 +128,7 @@ public abstract class Server {
 		}
 	}
 	
-	protected abstract void stop();
+	public abstract void stop();
 	
 	protected void onCommunicationError(CommunicationError e) {
 		synchronized(e) {
