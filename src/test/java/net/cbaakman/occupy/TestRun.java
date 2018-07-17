@@ -2,13 +2,19 @@ package net.cbaakman.occupy;
 
 import java.net.InetAddress;
 
-import net.cbaakman.occupy.enums.MessageType;
+import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.communicate.Server;
+import net.cbaakman.occupy.communicate.enums.PacketType;
+import net.cbaakman.occupy.config.ClientConfig;
+import net.cbaakman.occupy.config.ServerConfig;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.network.Address;
 import net.cbaakman.occupy.network.NetworkClient;
 import net.cbaakman.occupy.network.NetworkServer;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
 public class TestRun {
 
@@ -24,8 +30,14 @@ public class TestRun {
 		};
 		
 		int serverPort = 5000;
-		final Server server = new NetworkServer(errorHandler, serverPort);
-		final Client client = new NetworkClient(errorHandler, new Address(InetAddress.getLoopbackAddress(), serverPort));
+		ServerConfig serverConfig = new ServerConfig();
+		serverConfig.setListenPort(serverPort);
+		
+		ClientConfig clientConfig = new ClientConfig();
+		clientConfig.setServerAddress(new Address(InetAddress.getLoopbackAddress(), serverPort));
+		
+		final Server server = new NetworkServer(errorHandler, serverConfig);
+		final Client client = new NetworkClient(errorHandler, clientConfig);
 		
 		Thread serverThread = new Thread("server") {
 			public void run() {

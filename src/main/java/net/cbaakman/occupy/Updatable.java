@@ -5,14 +5,15 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
+import net.cbaakman.occupy.communicate.Identifier;
 
 @Data
 public abstract class Updatable {
 	
 	@Setter(AccessLevel.NONE)
-	private UUID ownerId;
+	private Identifier ownerId;
 	
-	protected Updatable(UUID ownerId) {
+	protected Updatable(Identifier ownerId) {
 		this.ownerId = ownerId;
 	}
 	

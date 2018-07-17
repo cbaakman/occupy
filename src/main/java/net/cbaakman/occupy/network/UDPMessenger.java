@@ -18,8 +18,8 @@ import java.util.UUID;
 
 import javax.annotation.PreDestroy;
 
-import net.cbaakman.occupy.Message;
 import net.cbaakman.occupy.WhileThread;
+import net.cbaakman.occupy.communicate.Packet;
 import net.cbaakman.occupy.errors.CommunicationError;
 
 public abstract class UDPMessenger {
@@ -31,7 +31,7 @@ public abstract class UDPMessenger {
 			
 			ByteArrayInputStream bais;
 			ObjectInputStream ois;
-			Message message;
+			Packet message;
 						
 			try {
 				InetSocketAddress address = (InetSocketAddress)channel.receive(buf);
@@ -39,7 +39,7 @@ public abstract class UDPMessenger {
 					bais = new ByteArrayInputStream(buf.array());
 					ois = new ObjectInputStream(bais);
 					
-					message = (Message)ois.readObject();
+					message = (Packet)ois.readObject();
 					UDPMessenger.this.onReceive(new Address(address.getAddress(), address.getPort()), message);
 				}
 			} catch (ClassNotFoundException | IOException e) {
@@ -61,14 +61,14 @@ public abstract class UDPMessenger {
 		listenerThread.start();
 	}
 	
-	abstract void onReceive(Address address, Message message);
+	abstract void onReceive(Address address, Packet message);
 	abstract void onReceiveError(Exception e);
 	
 	int getPort() {
 		return channel.socket().getLocalPort();
 	}
 	
-	void send(Address receiverAddress, Message message) throws IOException {
+	void send(Address receiverAddress, Packet message) throws IOException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 	    ObjectOutputStream oos = new ObjectOutputStream(baos);
 	    oos.writeObject(message);

@@ -1,9 +1,13 @@
-package net.cbaakman.occupy;
+package net.cbaakman.occupy.communicate;
 
 import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,17 +19,28 @@ import javax.swing.JFrame;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
+import java.security.InvalidKeyException;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
+import net.cbaakman.occupy.Updatable;
+import net.cbaakman.occupy.Update;
 import net.cbaakman.occupy.annotations.ClientToServer;
 import net.cbaakman.occupy.annotations.ServerToClient;
 import net.cbaakman.occupy.authenticate.Credentials;
-import net.cbaakman.occupy.enums.MessageType;
+import net.cbaakman.occupy.communicate.enums.PacketType;
+import net.cbaakman.occupy.communicate.enums.RequestType;
+import net.cbaakman.occupy.communicate.enums.ResponseType;
+import net.cbaakman.occupy.config.ClientConfig;
 import net.cbaakman.occupy.errors.AuthenticationError;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.SeriousErrorHandler;
 import net.cbaakman.occupy.render.ClientGLEventListener;
+import net.cbaakman.occupy.security.SSLChannel;
 
 public abstract class Client {
 	
@@ -34,24 +49,81 @@ public abstract class Client {
 
 	private Map<UUID, Updatable> updatables = new HashMap<UUID, Updatable>();
 	
-	private ErrorHandler errorHandler;
+	protected ErrorHandler errorHandler;
+	protected ClientConfig config;
 	
-	public Client(ErrorHandler errorHandler) {
+	public Client(ErrorHandler errorHandler, ClientConfig config) {
 		this.errorHandler = errorHandler;
+		this.config = config;
 	}
 
 	public abstract void run() throws InitError;
 	
-	public abstract void login(Credentials credentials) throws AuthenticationError;
-	public abstract void sendMessage(Message message);
+	public abstract void sendPacket(Packet packet);
+	protected abstract Connection connectToServer() throws CommunicationError;
 
-	protected void onMessage(Message message) {
+	protected void onPacket(Packet message) {
 		
-		if (message.getType().equals(MessageType.UPDATE)) {
+		if (message.getType().equals(PacketType.UPDATE)) {
 			processUpdateFromServer((Update)message.getData());
 		}
-		else if (message.getType().equals(MessageType.LOGOUT)) {
+		else if (message.getType().equals(PacketType.LOGOUT)) {
 			disconnect();
+		}
+	}
+	
+	public void login(Credentials credentials) throws AuthenticationError {
+		Connection connection;
+		try {
+			connection = connectToServer();
+		} catch (CommunicationError e) {
+			onCommunicationError(e);
+			return;
+		}
+		
+		try {
+			// Tell the server that we want to log in:
+			ObjectOutputStream oos = new ObjectOutputStream(connection.getOutputStream());
+			oos.writeObject(RequestType.LOGIN);
+			oos.flush();
+
+			// Convert credentials to bytes:
+			ByteArrayOutputStream credentialsByteStream = new ByteArrayOutputStream();
+			oos = new ObjectOutputStream(credentialsByteStream);
+			oos.writeObject(credentials);
+			credentialsByteStream.close();
+			oos.close();
+
+			// Send the credentials to the server over ssl:
+			SSLChannel sslChannel = new SSLChannel(connection.getInputStream(), connection.getOutputStream());
+			sslChannel.send(credentialsByteStream.toByteArray());
+		
+			// Read the server's response:
+			ObjectInputStream ois = new ObjectInputStream(connection.getInputStream());
+			ResponseType response = (ResponseType)ois.readObject();
+			
+			if (response.equals(ResponseType.OK)) {
+				// Authentication OK
+				return;
+			}
+			else if (response.equals(ResponseType.AUTHENTICATION_ERROR))
+				throw new AuthenticationError();
+			
+		} catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException
+				| NoSuchPaddingException | ClassNotFoundException e) {
+			// Not supposed to happen!
+			SeriousErrorHandler.handle(e);
+			
+		} catch (IOException e) {
+			onCommunicationError(new CommunicationError(e));
+			
+		} finally {
+			// Always try to close the connection to the server.
+			try {
+				connection.close();
+			} catch (IOException e) {
+				onCommunicationError(new CommunicationError(e));
+			}
 		}
 	}
 	
@@ -147,7 +219,7 @@ public abstract class Client {
 						try {
 							Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
 
-							sendMessage(new Message(MessageType.UPDATE, update));
+							sendPacket(new Packet(PacketType.UPDATE, update));
 							
 						} catch (IllegalArgumentException | IllegalAccessException e) {
 							// Must not happen!
@@ -169,7 +241,7 @@ public abstract class Client {
 	public abstract void stop();
 	
 	public void disconnect() {
-    	sendMessage(new Message(MessageType.LOGOUT, null));
+    	sendPacket(new Packet(PacketType.LOGOUT, null));
     	
     	updatables.clear();
 	}

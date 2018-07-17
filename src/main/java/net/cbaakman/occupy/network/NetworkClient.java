@@ -1,49 +1,37 @@
 package net.cbaakman.occupy.network;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
-import java.security.InvalidKeyException;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-
-import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.authenticate.Credentials;
-import net.cbaakman.occupy.Message;
+import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.communicate.Connection;
+import net.cbaakman.occupy.communicate.Packet;
+import net.cbaakman.occupy.config.ClientConfig;
 import net.cbaakman.occupy.errors.AuthenticationError;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.SeriousErrorHandler;
-import net.cbaakman.occupy.security.SSLChannel;
 
 public class NetworkClient extends Client {
 	
-	private Address serverAddress;
 	private UDPMessenger udpMessenger;
 	private boolean running;
 	
-	public NetworkClient(ErrorHandler errorHandler, Address serverAddress) {
-		super(errorHandler);
-		
-		this.serverAddress = serverAddress;
+	public NetworkClient(ErrorHandler errorHandler, ClientConfig config) {
+		super(errorHandler, config);
 	}
 	
 	private void initUDP() throws IOException {
 		udpMessenger = new UDPMessenger() {
 			@Override
-			void onReceive(Address address, Message message) {
-				if (!address.getAddress().equals(NetworkClient.this.serverAddress))
+			void onReceive(Address address, Packet message) {
+				if (!address.getAddress().equals(config.getServerAddress()))
 					return;
 
-				NetworkClient.this.onMessage(message);
+				NetworkClient.this.onPacket(message);
 			}
 
 			@Override
@@ -88,74 +76,44 @@ public class NetworkClient extends Client {
 	}
 
 	@Override
-	public void login(Credentials credentials) throws AuthenticationError {
+	public Connection connectToServer() throws CommunicationError {
 		if (udpMessenger == null)
 			SeriousErrorHandler.handle(new RuntimeException("client is not running"));
 		
-		try {			
-			Socket socket = new Socket();
-			
+		Socket socket = new Socket();
+		try {
 			// Must use the same port as udp, for the server to know.
 			socket.bind(new InetSocketAddress(udpMessenger.getPort()));
 			
-			socket.connect(new InetSocketAddress(serverAddress.getAddress(),
-									   			 serverAddress.getPort()), 1000);
+			socket.connect(new InetSocketAddress(config.getServerAddress().getAddress(),
+												 config.getServerAddress().getPort()), 1000);
 			if (socket.isConnected()) {
-				// Tell the server that we want to log in:
-				ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-				oos.writeObject(RequestType.LOGIN);
-				oos.flush();
 				
-				SSLChannel sslChannel = new SSLChannel(socket.getInputStream(), socket.getOutputStream());
-				ByteArrayOutputStream baos = new ByteArrayOutputStream();
-				oos = new ObjectOutputStream(baos);
-				oos.writeObject(credentials);
-				baos.close();
-				oos.close();
-				try {
-					sslChannel.send(baos.toByteArray());
-				} catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException
-						| NoSuchPaddingException e) {
-					// Not supposed to happen!
-					SeriousErrorHandler.handle(e);
-				}
-				
-				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-				
-				ResponseType response = null;
-				try {
-					response = (ResponseType)ois.readObject();
-				} catch (ClassNotFoundException e) {
-					// Not supposed to happen!
-					SeriousErrorHandler.handle(e);
-					return;
-				} finally {
-					socket.close();
-				}
-				
-				if (response.equals(ResponseType.OK)) {
-					// Authentication OK
-					return;
-				}
-				else if (response.equals(ResponseType.AUTHENTICATION_ERROR))
-					throw new AuthenticationError();
+				return new SocketConnection(socket);
 			}
-			else
-				onCommunicationError(
-					new CommunicationError(
-						String.format("not connected to server at %s %d",
-									  serverAddress.getAddress(),
-									  serverAddress.getPort())));
+			else {
+				socket.close();
+				
+				throw new CommunicationError(
+					String.format("not connected to server at %s %d",
+								  config.getServerAddress().getAddress(),
+								  config.getServerAddress().getPort()));
+			}
 			
 		} catch (IOException e) {
-			onCommunicationError(new CommunicationError(e));
+			try {
+				socket.close();
+			} catch (IOException ex) {
+				throw new CommunicationError(ex);
+			}
+			throw new CommunicationError(e);
 		}
 	}
 
 	@Override
-	public void sendMessage(Message message) {
+	public void sendPacket(Packet packet) {
 		try {
-			udpMessenger.send(serverAddress, message);
+			udpMessenger.send(config.getServerAddress(), packet);
 		} catch (IOException e) {
 			onCommunicationError(new CommunicationError(e));
 		}
