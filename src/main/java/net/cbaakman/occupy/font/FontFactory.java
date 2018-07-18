@@ -39,9 +39,9 @@ public class FontFactory {
 		/**
 		 * Negative means not used.
 		 */
-		private float horiz_origin_x = -1.0f,
-					  horiz_origin_y = -1.0f,
-					  horiz_adv_x = -1.0f;
+		private float horizOriginX = -1.0f,
+					  horizOriginY = -1.0f,
+					  horizAdvX = -1.0f;
 	}
 	
 	static Logger logger = Logger.getLogger(FontFactory.class);
@@ -49,15 +49,15 @@ public class FontFactory {
 	/**
 	 * all the font's glyphs should fit inside this
 	 */
-	private BoundingBox boundingBox = new BoundingBox();
+	private BoundingBox boundingBox = new BoundingBox(0.0f,0.0f,0.0f,0.0f);
 	
 	/**
 	 * Can be overridden by the glyph's value.
 	 */
-	float horiz_origin_x = 0.0f,
-		  horiz_origin_y = 0.0f,
-	      horiz_adv_x = 0.0f;
-	int units_per_em;
+	float horizOriginX = 0.0f,
+		  horizOriginY = 0.0f,
+	      horizAdvX = 0.0f;
+	int unitsPerEM;
 	
 	private Map<Character, GlyphFactory> glyphFactories = new HashMap<Character, GlyphFactory>();
 	private Map<Character, Map<Character, Float>> hKernTable = new HashMap<Character, Map<Character, Float>>();
@@ -87,13 +87,13 @@ public class FontFactory {
 		FontFactory fontFactory = new FontFactory();
 		
 		if (font.hasAttribute("horiz-adv-x"))
-			fontFactory.horiz_adv_x = Float.parseFloat(font.getAttribute("horiz-adv-x"));
+			fontFactory.horizAdvX = Float.parseFloat(font.getAttribute("horiz-adv-x"));
 
 		if (font.hasAttribute("horiz-origin-x"))
-			fontFactory.horiz_origin_x = Float.parseFloat(font.getAttribute("horiz-origin-x"));
+			fontFactory.horizOriginX = Float.parseFloat(font.getAttribute("horiz-origin-x"));
 
 		if (font.hasAttribute("horiz-origin-y"))
-			fontFactory.horiz_origin_y = Float.parseFloat(font.getAttribute("horiz-origin-y"));
+			fontFactory.horizOriginY = Float.parseFloat(font.getAttribute("horiz-origin-y"));
 
 		Element fontFace = findDirectChildElement(font, "font-face");
 		if (fontFace == null)
@@ -207,13 +207,13 @@ public class FontFactory {
 		}
 
 		if (glyphElement.hasAttribute("horiz-adv-x"))
-			glyphFactory.horiz_adv_x = Float.parseFloat(glyphElement.getAttribute("horiz-adv-x"));
+			glyphFactory.horizAdvX = Float.parseFloat(glyphElement.getAttribute("horiz-adv-x"));
 
 		if (glyphElement.hasAttribute("horiz-origin-x"))
-			glyphFactory.horiz_origin_x = Float.parseFloat(glyphElement.getAttribute("horiz-origin-x"));
+			glyphFactory.horizOriginX = Float.parseFloat(glyphElement.getAttribute("horiz-origin-x"));
 
 		if (glyphElement.hasAttribute("horiz-origin-y"))
-			glyphFactory.horiz_origin_y = Float.parseFloat(glyphElement.getAttribute("horiz-origin-y"));
+			glyphFactory.horizOriginY = Float.parseFloat(glyphElement.getAttribute("horiz-origin-y"));
 	
 		logger.debug(String.format("parsed glyph for %c", glyphFactory.unicodeId));
 		
@@ -245,7 +245,7 @@ public class FontFactory {
 																							   NumberFormatException {
 		if (!fontFaceElement.hasAttribute("units-per-em"))
 			throw new ParseError("font-face is missing required attribute units-per-em");
-		fontFactory.units_per_em = Integer.parseInt(fontFaceElement.getAttribute("units-per-em"));
+		fontFactory.unitsPerEM = Integer.parseInt(fontFaceElement.getAttribute("units-per-em"));
 		
 		if (!fontFaceElement.hasAttribute("bbox"))
 			throw new ParseError("font-face is missing required attribute bbox");
@@ -271,14 +271,54 @@ public class FontFactory {
 		return null;
 	}
 	
-	static BufferedImage genGlyphImage(String d) throws TranscoderException {
+	public Font generateFont(float size) throws TranscoderException {
+		float multiply = size / unitsPerEM;
+		
+		Font font = new Font();
+		font.setSize(size);
+		font.setBoundingBox(new BoundingBox(multiply * boundingBox.getLeft(),
+										    multiply * boundingBox.getBottom(),
+										    multiply * boundingBox.getRight(),
+										    multiply * boundingBox.getTop()));
+		font.setHorizOriginX(multiply * horizOriginX);
+		font.setHorizOriginY(multiply * horizOriginY);
+		font.setHorizAdvX(multiply * horizAdvX);
+		
+		// Fill in the hkern table.
+		for (Character c1 : hKernTable.keySet()) {
+			font.getHKernTable().put(c1, new HashMap<Character, Float>());
+			for (Character c2 : hKernTable.get(c1).keySet()) {
+				font.getHKernTable().get(c1).put(c2, multiply * hKernTable.get(c1).get(c2));
+			}
+		}
+		
+		for (Character c : glyphFactories.keySet()) {
+			GlyphFactory glyphFactory = glyphFactories.get(c);
+			
+			Glyph glyph = new Glyph();
+			glyph.setImage(generateGlyphImage(boundingBox, multiply, glyphFactory.getD()));
+			
+			font.getGlyphs().put(c, glyph);
+		}
+		
+		return font;
+	}
+	
+	static private BufferedImage generateGlyphImage(BoundingBox bbox, float multiply, String d) throws TranscoderException {
 
 		BufferedImageTranscoder imageTranscoder = new BufferedImageTranscoder();
+		
+		String svg = String.format("<?xml version=\"1.0\" standalone=\"no\"?>" +
+								   "<svg><g transform=\"translate(%f %f) scale(%f)\">" +
+								   "<path d=\"%s\"/></g></svg>", -bbox.getLeft() * multiply
+								   							   , -bbox.getBottom() * multiply
+								   							   , multiply
+								   							   , d);
 
-	    imageTranscoder.addTranscodingHint(PNGTranscoder.KEY_WIDTH, 100);
-	    imageTranscoder.addTranscodingHint(PNGTranscoder.KEY_HEIGHT, 100);
+	    imageTranscoder.addTranscodingHint(PNGTranscoder.KEY_WIDTH, bbox.getWidth() * multiply);
+	    imageTranscoder.addTranscodingHint(PNGTranscoder.KEY_HEIGHT, bbox.getHeight() * multiply);
 
-	    TranscoderInput input = new TranscoderInput(d);
+	    TranscoderInput input = new TranscoderInput(svg);
 	    imageTranscoder.transcode(input, null);
 
 	    BufferedImage image = imageTranscoder.getBufferedImage();
