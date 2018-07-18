@@ -16,6 +16,8 @@ import java.util.UUID;
 
 import javax.swing.JFrame;
 
+import org.apache.log4j.Logger;
+
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
@@ -43,6 +45,8 @@ import net.cbaakman.occupy.render.ClientGLEventListener;
 import net.cbaakman.occupy.security.SSLChannel;
 
 public abstract class Client {
+	
+	Logger logger = Logger.getLogger(Client.class);
 	
 	JFrame frame;
 	GLCanvas glCanvas;
@@ -169,15 +173,22 @@ public abstract class Client {
 	    int y = (int) ((dimension.getHeight() - frame.getHeight()) / 2);
 	    frame.setLocation(x, y);
 	}
+	
+	public GLCanvas getGLCanvas() {
+		return glCanvas;
+	}
 
 	protected void onInit() throws InitError {
 
-		GLProfile profile = GLProfile.get(GLProfile.GL3);
+		GLProfile profile = GLProfile.get(GLProfile.GL2);
 		GLCapabilities capabilities = new GLCapabilities(profile);
 	
 		glCanvas = new GLCanvas(capabilities);
-		glCanvas.addGLEventListener(new ClientGLEventListener());
-		glCanvas.setSize(800, 600);
+		glCanvas.addGLEventListener(new ClientGLEventListener(this));
+		glCanvas.setSize(config.getScreenWidth(), config.getScreenHeight());
+		
+		logger.debug(String.format("screen width: %d, screen height: %d",
+								   glCanvas.getWidth(), glCanvas.getHeight()));
 
 		frame = new JFrame();
 		frame.getContentPane().add(glCanvas);
