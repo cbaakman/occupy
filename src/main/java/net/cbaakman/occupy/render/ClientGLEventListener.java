@@ -1,5 +1,12 @@
 package net.cbaakman.occupy.render;
 
+import java.io.IOException;
+
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.apache.batik.transcoder.TranscoderException;
+import org.xml.sax.SAXException;
+
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GL3;
@@ -9,11 +16,16 @@ import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.glu.GLU;
 
 import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.errors.ParseError;
+import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.font.FontFactory;
+import net.cbaakman.occupy.font.Font;
 
 public class ClientGLEventListener implements GLEventListener {
 
 	private Client client;
 	private GLU glu = new GLU();
+	private GLTextRenderer glTextRenderer;
 	
 	public ClientGLEventListener(Client client) {
 		this.client = client;
@@ -35,41 +47,41 @@ public class ClientGLEventListener implements GLEventListener {
         
         gl2.glClearColor(0.0f, 0.5f, 0.5f, 1.0f);
         gl2.glClear(GL2.GL_COLOR_BUFFER_BIT);
-        
-        gl2.glDisable(GL2.GL_DEPTH_TEST);
-        gl2.glDisable(GL2.GL_CULL_FACE);
-        
+
         gl2.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-
-		gl2.glBegin(GL2.GL_QUADS);
-
-		gl2.glVertex2f(100, 100);
-
-		gl2.glVertex2f(500, 100);
-
-		gl2.glVertex2f(500, 500);
-
-		gl2.glVertex2f(100, 500);
-
-		gl2.glEnd();
+        gl2.glEnable(GL2.GL_TEXTURE_2D);
+        gl2.glEnable(GL2.GL_BLEND);
+        gl2.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
+        
+        glTextRenderer.renderGlyph(gl2, 'A');
 	}
 
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
-		// TODO Auto-generated method stub
-
+		GL2 gl2 = drawable.getGL().getGL2();
+		glTextRenderer.cleanupGL(gl2);
 	}
 
 	@Override
 	public void init(GLAutoDrawable drawable) {
-		// TODO Auto-generated method stub
-
+		GL2 gl2 = drawable.getGL().getGL2();
+		
+		FontFactory fontFactory;
+		try {
+			fontFactory = FontFactory.parse(ClientGLEventListener.class.getResourceAsStream("/font/Lumean.svg"));
+			Font font = fontFactory.generateFont(36);
+			
+			glTextRenderer = new GLTextRenderer(gl2, font);
+			
+		} catch (NumberFormatException | IOException |
+				 ParserConfigurationException | SAXException |
+				 ParseError | TranscoderException | NullPointerException e) {
+			SeriousErrorHandler.handle(e);
+		}
 	}
 
 	@Override
 	public void reshape(GLAutoDrawable drawable, int x, int y, int w, int h) {
 		// TODO Auto-generated method stub
-
 	}
-
 }

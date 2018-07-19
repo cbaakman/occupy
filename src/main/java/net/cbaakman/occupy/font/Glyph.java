@@ -9,7 +9,10 @@ public class Glyph {
 	private String name = "";
 	private char unicodeId;
 	
-	private BufferedImage image;
+	/**
+	 * May be null if the glyph isn't supposed to have an image.
+	 */
+	private BufferedImage image = null;
 	
 	/**
 	* Negative means: don't use, take font's default.

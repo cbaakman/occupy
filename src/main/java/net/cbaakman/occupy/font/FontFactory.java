@@ -1,6 +1,7 @@
 package net.cbaakman.occupy.font;
 
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -62,7 +63,7 @@ public class FontFactory {
 	private Map<Character, GlyphFactory> glyphFactories = new HashMap<Character, GlyphFactory>();
 	private Map<Character, Map<Character, Float>> hKernTable = new HashMap<Character, Map<Character, Float>>();
 
-	static FontFactory parse(InputStream is) throws IOException,
+	public static FontFactory parse(InputStream is) throws IOException,
 													ParserConfigurationException,
 													SAXException, ParseError,
 													NumberFormatException {
@@ -176,8 +177,6 @@ public class FontFactory {
 				u2.add(unicodeId);
 			}
 		
-		logger.debug(String.format("found hkern %.1f for %s and %s", k, u1.toString(), u2.toString()));
-		
 		// Fill in the values in the table:
 		for (char left : u1) {
 			if (!fontFactory.hKernTable.containsKey(left))
@@ -214,8 +213,6 @@ public class FontFactory {
 
 		if (glyphElement.hasAttribute("horiz-origin-y"))
 			glyphFactory.horizOriginY = Float.parseFloat(glyphElement.getAttribute("horiz-origin-y"));
-	
-		logger.debug(String.format("parsed glyph for %c", glyphFactory.unicodeId));
 		
 		fontFactory.glyphFactories.put(glyphFactory.unicodeId, glyphFactory);
 	}
@@ -274,6 +271,9 @@ public class FontFactory {
 	public Font generateFont(float size) throws TranscoderException {
 		float multiply = size / unitsPerEM;
 		
+		logger.debug("unitsPerEM=" + unitsPerEM);
+		logger.debug("multiply=" + multiply);
+		
 		Font font = new Font();
 		font.setSize(size);
 		font.setBoundingBox(new BoundingBox(multiply * boundingBox.getLeft(),
@@ -296,7 +296,8 @@ public class FontFactory {
 			GlyphFactory glyphFactory = glyphFactories.get(c);
 			
 			Glyph glyph = new Glyph();
-			glyph.setImage(generateGlyphImage(boundingBox, multiply, glyphFactory.getD()));
+			if (!glyphFactory.getD().isEmpty())
+				glyph.setImage(generateGlyphImage(boundingBox, multiply, glyphFactory.getD()));
 			
 			font.getGlyphs().put(c, glyph);
 		}
@@ -308,17 +309,23 @@ public class FontFactory {
 
 		BufferedImageTranscoder imageTranscoder = new BufferedImageTranscoder();
 		
+		float origX = bbox.getLeft() * multiply,
+			  origY = bbox.getBottom() * multiply,
+			  imageWidth = bbox.getWidth() * multiply,
+			  imageHeight = bbox.getHeight() * multiply;
+		
 		String svg = String.format("<?xml version=\"1.0\" standalone=\"no\"?>" +
-								   "<svg><g transform=\"translate(%f %f) scale(%f)\">" +
-								   "<path d=\"%s\"/></g></svg>", -bbox.getLeft() * multiply
-								   							   , -bbox.getBottom() * multiply
-								   							   , multiply
-								   							   , d);
+								   "<svg width=\"%f\" height=\"%f\">" +
+								   "<g transform=\"translate(%f %f) scale(%f)\">" +
+								   "<path d=\"%s\" fill=\"white\"/></g></svg>",
+								   imageWidth, imageHeight,
+	   							   -origX, -origY,
+	   							   multiply, d);
 
-	    imageTranscoder.addTranscodingHint(PNGTranscoder.KEY_WIDTH, bbox.getWidth() * multiply);
-	    imageTranscoder.addTranscodingHint(PNGTranscoder.KEY_HEIGHT, bbox.getHeight() * multiply);
-
-	    TranscoderInput input = new TranscoderInput(svg);
+	    imageTranscoder.addTranscodingHint(PNGTranscoder.KEY_WIDTH, (float)Math.ceil(imageWidth));
+	    imageTranscoder.addTranscodingHint(PNGTranscoder.KEY_HEIGHT, (float)Math.ceil(imageHeight));
+	    
+	    TranscoderInput input = new TranscoderInput(new ByteArrayInputStream(svg.getBytes()));
 	    imageTranscoder.transcode(input, null);
 
 	    BufferedImage image = imageTranscoder.getBufferedImage();

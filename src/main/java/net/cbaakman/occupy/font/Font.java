@@ -23,4 +23,8 @@ public class Font {
 	
 	private Map<Character, Glyph> glyphs = new HashMap<Character, Glyph>();
 	private Map<Character, Map<Character, Float>> hKernTable = new HashMap<Character, Map<Character, Float>>();
+	
+	public Glyph getGlyph(Character c) {
+		return glyphs.get(c);
+	}
 }
