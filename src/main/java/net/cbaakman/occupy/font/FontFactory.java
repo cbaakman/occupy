@@ -181,8 +181,9 @@ public class FontFactory {
 		for (char left : u1) {
 			if (!fontFactory.hKernTable.containsKey(left))
 				fontFactory.hKernTable.put(left, new HashMap<Character, Float>());
-			
+
 			for (char right : u2) {
+				
 				fontFactory.hKernTable.get(left).put(right, k);
 			}
 		}
@@ -271,9 +272,6 @@ public class FontFactory {
 	public Font generateFont(float size) throws TranscoderException {
 		float multiply = size / unitsPerEM;
 		
-		logger.debug("unitsPerEM=" + unitsPerEM);
-		logger.debug("multiply=" + multiply);
-		
 		Font font = new Font();
 		font.setSize(size);
 		font.setBoundingBox(new BoundingBox(multiply * boundingBox.getLeft(),
@@ -286,7 +284,9 @@ public class FontFactory {
 		
 		// Fill in the hkern table.
 		for (Character c1 : hKernTable.keySet()) {
-			font.getHKernTable().put(c1, new HashMap<Character, Float>());
+			if (!font.getHKernTable().containsKey(c1))
+				font.getHKernTable().put(c1, new HashMap<Character, Float>());
+			
 			for (Character c2 : hKernTable.get(c1).keySet()) {
 				font.getHKernTable().get(c1).put(c2, multiply * hKernTable.get(c1).get(c2));
 			}
@@ -298,6 +298,12 @@ public class FontFactory {
 			Glyph glyph = new Glyph();
 			if (!glyphFactory.getD().isEmpty())
 				glyph.setImage(generateGlyphImage(boundingBox, multiply, glyphFactory.getD()));
+			
+			glyph.setHorizAdvX(multiply * glyphFactory.getHorizAdvX());
+			glyph.setHorizOriginX(multiply * glyphFactory.getHorizOriginX());
+			glyph.setHorizOriginY(multiply * glyphFactory.getHorizOriginY());
+			glyph.setName(glyphFactory.getName());
+			glyph.setUnicodeId(glyphFactory.getUnicodeId());
 			
 			font.getGlyphs().put(c, glyph);
 		}

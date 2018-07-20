@@ -16,6 +16,7 @@ import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.glu.GLU;
 
 import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.errors.MissingGlyphError;
 import net.cbaakman.occupy.errors.ParseError;
 import net.cbaakman.occupy.errors.SeriousErrorHandler;
 import net.cbaakman.occupy.font.FontFactory;
@@ -53,7 +54,11 @@ public class ClientGLEventListener implements GLEventListener {
         gl2.glEnable(GL2.GL_BLEND);
         gl2.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
         
-        glTextRenderer.renderGlyph(gl2, 'A');
+        try {
+			glTextRenderer.renderTextLeftAlign(gl2, "Hello!");
+		} catch (MissingGlyphError e) {
+			SeriousErrorHandler.handle(e);
+		}
 	}
 
 	@Override

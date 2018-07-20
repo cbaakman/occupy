@@ -13,8 +13,13 @@ import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
 
 import lombok.Data;
+import net.cbaakman.occupy.errors.MissingGlyphError;
 import net.cbaakman.occupy.font.Font;
 import net.cbaakman.occupy.font.Glyph;
+import net.cbaakman.occupy.font.TextAlignment;
+import net.cbaakman.occupy.font.TextLine;
+import net.cbaakman.occupy.font.enums.HorizontalTextAlignment;
+import net.cbaakman.occupy.font.enums.VerticalTextAlignment;
 
 public class GLTextRenderer {
 	
@@ -82,26 +87,25 @@ public class GLTextRenderer {
 		gl2.glDeleteTextures(1, new int[] {glTextureId}, 0);
 	}
 
-	void renderGlyph(GL2 gl2, Character c) {
+	public void renderGlyph(GL2 gl2, char c) throws MissingGlyphError {
 		
 		Glyph glyph = font.getGlyph(c);
+		if (glyph == null)
+			throw new MissingGlyphError(c);
+		
 		if (glyph.getImage() == null)
 			return;
 		
-		float x = 0.0f, y = 0.0f,
+		float x = font.getHorizOriginX(c),
+			  y = font.getHorizOriginY(c),
 				
 			  /* The glyph bounding box might be a little bit smaller than the texture.
 			   * Use fw and fh to correct it. */
               tw = (float)(glyph.getImage().getWidth()) / font.getBoundingBox().getWidth(),
               th = (float)(glyph.getImage().getHeight()) / font.getBoundingBox().getHeight();
-	
-		if (glyph.getHorizOriginX() > 0.0f)
-			x = glyph.getHorizOriginX();
-		if (glyph.getHorizOriginY() > 0.0f)
-			y = glyph.getHorizOriginY();
 		
 		gl2.glPushMatrix();
-		gl2.glTranslatef(x, y, 0.0f);
+		gl2.glTranslatef(-x, -y, 0.0f);
 		
 		gl2.glBindTexture(GL2.GL_TEXTURE_2D, glyphEntries.get(c).getGlTextureId());
 
@@ -120,6 +124,55 @@ public class GLTextRenderer {
 		gl2.glVertex2f(x, y);
 
 		gl2.glEnd();
+		
+		gl2.glPopMatrix();
+	}
+	public void renderTextLeftAlign(GL2 gl2, String text) throws MissingGlyphError {
+		float x = 0.0f;
+		int i = 0;
+		for (i = 0; i < text.length(); i++) {
+
+			if (i > 0) {
+				x += font.getHKern(text.charAt(i - 1), text.charAt(i));
+			}
+			
+			gl2.glPushMatrix();
+			gl2.glTranslatef(x, 0.0f, 0.0f);
+			
+			renderGlyph(gl2, text.charAt(i));
+			
+			gl2.glPopMatrix();
+			
+			x += font.getHorizAdvX(text.charAt(i));
+		}
+	}
+	
+	public void RenderAlignedText(GL2 gl2, TextAlignment alignment,
+								  HorizontalTextAlignment ha, VerticalTextAlignment va)
+								throws MissingGlyphError {
+		gl2.glPushMatrix();
+		
+		if (va.equals(VerticalTextAlignment.TOP))
+			gl2.glTranslatef(0.0f, -alignment.getTextHeight(), 0.0f);
+		else if (va.equals(VerticalTextAlignment.CENTER))
+			gl2.glTranslatef(0.0f, -alignment.getTextHeight() / 2, 0.0f);
+		
+		
+		for (TextLine line : alignment.getLines()) {
+			
+			gl2.glPushMatrix();
+			
+			if (va.equals(HorizontalTextAlignment.RIGHT))
+				gl2.glTranslatef((alignment.getMaxWidth() - line.getWidth()), 0.0f, 0.0f);
+			else if (va.equals(HorizontalTextAlignment.CENTER))
+				gl2.glTranslatef((alignment.getMaxWidth() - line.getWidth()) / 2, 0.0f, 0.0f);
+			
+			renderTextLeftAlign(gl2, line.toString());
+			
+			gl2.glPopMatrix();
+			
+			gl2.glTranslatef(0.0f, -line.getHeight(), 0.0f);
+		}
 		
 		gl2.glPopMatrix();
 	}
