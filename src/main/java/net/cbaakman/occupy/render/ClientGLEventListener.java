@@ -20,6 +20,7 @@ import net.cbaakman.occupy.errors.MissingGlyphError;
 import net.cbaakman.occupy.errors.ParseError;
 import net.cbaakman.occupy.errors.SeriousErrorHandler;
 import net.cbaakman.occupy.font.FontFactory;
+import net.cbaakman.occupy.font.SVGStyle;
 import net.cbaakman.occupy.font.Font;
 
 public class ClientGLEventListener implements GLEventListener {
@@ -74,7 +75,7 @@ public class ClientGLEventListener implements GLEventListener {
 		FontFactory fontFactory;
 		try {
 			fontFactory = FontFactory.parse(ClientGLEventListener.class.getResourceAsStream("/font/Lumean.svg"));
-			Font font = fontFactory.generateFont(36);
+			Font font = fontFactory.generateFont(36, new SVGStyle());
 			
 			glTextRenderer = new GLTextRenderer(gl2, font);
 			

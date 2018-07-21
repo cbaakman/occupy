@@ -269,7 +269,7 @@ public class FontFactory {
 		return null;
 	}
 	
-	public Font generateFont(float size) throws TranscoderException {
+	public Font generateFont(float size, SVGStyle style) throws TranscoderException {
 		float multiply = size / unitsPerEM;
 		
 		Font font = new Font();
@@ -297,7 +297,7 @@ public class FontFactory {
 			
 			Glyph glyph = new Glyph();
 			if (!glyphFactory.getD().isEmpty())
-				glyph.setImage(generateGlyphImage(boundingBox, multiply, glyphFactory.getD()));
+				glyph.setImage(generateGlyphImage(boundingBox, multiply, glyphFactory.getD(), style));
 			
 			glyph.setHorizAdvX(multiply * glyphFactory.getHorizAdvX());
 			glyph.setHorizOriginX(multiply * glyphFactory.getHorizOriginX());
@@ -311,7 +311,7 @@ public class FontFactory {
 		return font;
 	}
 	
-	static private BufferedImage generateGlyphImage(BoundingBox bbox, float multiply, String d) throws TranscoderException {
+	static private BufferedImage generateGlyphImage(BoundingBox bbox, float multiply, String d, SVGStyle style) throws TranscoderException {
 
 		BufferedImageTranscoder imageTranscoder = new BufferedImageTranscoder();
 		
@@ -323,10 +323,10 @@ public class FontFactory {
 		String svg = String.format("<?xml version=\"1.0\" standalone=\"no\"?>" +
 								   "<svg width=\"%f\" height=\"%f\">" +
 								   "<g transform=\"translate(%f %f) scale(%f)\">" +
-								   "<path d=\"%s\" fill=\"white\"/></g></svg>",
+								   "<path d=\"%s\" style=\"%s\"/></g></svg>",
 								   imageWidth, imageHeight,
 	   							   -origX, -origY,
-	   							   multiply, d);
+	   							   multiply, d, style.toString());
 
 	    imageTranscoder.addTranscodingHint(PNGTranscoder.KEY_WIDTH, (float)Math.ceil(imageWidth));
 	    imageTranscoder.addTranscodingHint(PNGTranscoder.KEY_HEIGHT, (float)Math.ceil(imageHeight));
