@@ -25,12 +25,14 @@ import net.cbaakman.occupy.font.Font;
 
 public class ClientGLEventListener implements GLEventListener {
 
+	private Font font;
 	private Client client;
 	private GLU glu = new GLU();
 	private GLTextRenderer glTextRenderer;
 	
-	public ClientGLEventListener(Client client) {
+	public ClientGLEventListener(Client client, Font font) {
 		this.client = client;
+		this.font = font;
 	}
 
 	@Override
@@ -71,19 +73,8 @@ public class ClientGLEventListener implements GLEventListener {
 	@Override
 	public void init(GLAutoDrawable drawable) {
 		GL2 gl2 = drawable.getGL().getGL2();
-		
-		FontFactory fontFactory;
-		try {
-			fontFactory = FontFactory.parse(ClientGLEventListener.class.getResourceAsStream("/font/Lumean.svg"));
-			Font font = fontFactory.generateFont(36, new SVGStyle());
-			
-			glTextRenderer = new GLTextRenderer(gl2, font);
-			
-		} catch (NumberFormatException | IOException |
-				 ParserConfigurationException | SAXException |
-				 ParseError | TranscoderException | NullPointerException e) {
-			SeriousErrorHandler.handle(e);
-		}
+
+		glTextRenderer = new GLTextRenderer(gl2, font);
 	}
 
 	@Override

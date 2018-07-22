@@ -11,10 +11,14 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.log4j.Logger;
+
 import lombok.Data;
 import net.cbaakman.occupy.font.FontFactory;
 
 public class Loader {
+	
+	static Logger logger = Logger.getLogger(Loader.class);
 	
 	@Data
 	private class LoadJobEntry {
@@ -27,11 +31,15 @@ public class Loader {
 	}
 	
 	private List<LoadJobEntry> jobs = new ArrayList<LoadJobEntry>();
+	private int nJobsDone = 0;
 
 	public int countJobsLeft() {
 		synchronized(jobs) {
 			return jobs.size();
 		}
+	}
+	public int getJobsDone() {
+		return nJobsDone;
 	}
 
 	private LoadJobEntry pickJobToRun() {
@@ -49,12 +57,13 @@ public class Loader {
 		return null;
 	}
 	
-	public static void runJob(LoadJobEntry entry) {
+	public void runJob(LoadJobEntry entry) {
 		try {
 			entry.result = entry.job.call();
 		} catch (Exception e) {
 			entry.error = e;
 		}
+		nJobsDone++;
 	}
 	
 	private class LoaderThread extends Thread {

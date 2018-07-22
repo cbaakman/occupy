@@ -13,4 +13,6 @@ public class ClientConfig {
 	
 	private int screenWidth = 800,
 				screenHeight = 600;
+	
+	private int loadConcurrency = 10;
 }

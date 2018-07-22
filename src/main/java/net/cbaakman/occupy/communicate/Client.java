@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.concurrent.Future;
 
 import javax.swing.JFrame;
 
@@ -41,7 +42,13 @@ import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.font.Font;
+import net.cbaakman.occupy.font.FontFactory;
+import net.cbaakman.occupy.font.SVGStyle;
+import net.cbaakman.occupy.load.LoadJob;
+import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.render.ClientGLEventListener;
+import net.cbaakman.occupy.render.LoadGLEventListener;
 import net.cbaakman.occupy.security.SSLChannel;
 
 public abstract class Client {
@@ -179,13 +186,41 @@ public abstract class Client {
 	}
 
 	protected void onInit() throws InitError {
+		
+		Loader loader = new Loader(config.getLoadConcurrency());
+		final Future<FontFactory> fFactory = loader.add(new LoadJob<FontFactory>() {
+
+			@Override
+			public FontFactory call() throws Exception {
+				return FontFactory.parse(ClientGLEventListener.class.getResourceAsStream("/font/Lumean.svg"));
+			}
+
+			@Override
+			public boolean isReady() {
+				return true;
+			}
+		});
+		loader.add(new LoadJob<Font>(){
+
+			@Override
+			public Font call() throws Exception {
+				return fFactory.get().generateFont(36, new SVGStyle());
+			}
+
+			@Override
+			public boolean isReady() {
+				return fFactory.isDone();
+			}
+		});
+		loader.start();
 
 		GLProfile profile = GLProfile.get(GLProfile.GL2);
 		GLCapabilities capabilities = new GLCapabilities(profile);
 	
 		glCanvas = new GLCanvas(capabilities);
-		glCanvas.addGLEventListener(new ClientGLEventListener(this));
 		glCanvas.setSize(config.getScreenWidth(), config.getScreenHeight());
+		
+		glCanvas.addGLEventListener(new LoadGLEventListener(loader));
 		
 		logger.debug(String.format("screen width: %d, screen height: %d",
 								   glCanvas.getWidth(), glCanvas.getHeight()));
@@ -240,6 +275,8 @@ public abstract class Client {
 				}
 			}
 		}
+		
+		glCanvas.display();
 	}
 	
 	protected void onShutdown() {
