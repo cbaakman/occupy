@@ -1,0 +1,659 @@
+<mesh>
+	<vertices>
+		<vertex id="0">
+			<pos x="1.0000" y="-3.0000" z="1.0000" />
+			<norm x="0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="1">
+			<pos x="1.0000" y="-3.0000" z="-1.0000" />
+			<norm x="0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="2">
+			<pos x="-1.0000" y="-3.0000" z="-1.0000" />
+			<norm x="-0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="3">
+			<pos x="-1.0000" y="-3.0000" z="1.0000" />
+			<norm x="-0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="4">
+			<pos x="1.0000" y="-5.0000" z="1.0000" />
+			<norm x="0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="5">
+			<pos x="1.0000" y="-5.0000" z="-1.0000" />
+			<norm x="0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="6">
+			<pos x="-1.0000" y="-5.0000" z="-1.0000" />
+			<norm x="-0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="7">
+			<pos x="-1.0000" y="-5.0000" z="1.0000" />
+			<norm x="-0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="8">
+			<pos x="-0.5000" y="-3.0000" z="0.5000" />
+			<norm x="-0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="9">
+			<pos x="-0.5000" y="-3.0000" z="-0.5000" />
+			<norm x="-0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="10">
+			<pos x="0.5000" y="-3.0000" z="-0.5000" />
+			<norm x="0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="11">
+			<pos x="0.5000" y="-3.0000" z="0.5000" />
+			<norm x="0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="12">
+			<pos x="-0.5000" y="-1.5000" z="0.5000" />
+			<norm x="-0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="13">
+			<pos x="-0.5000" y="-1.5000" z="-0.5000" />
+			<norm x="-0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="14">
+			<pos x="0.5000" y="-1.5000" z="-0.5000" />
+			<norm x="0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="15">
+			<pos x="0.5000" y="-1.5000" z="0.5000" />
+			<norm x="0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="16">
+			<pos x="-2.0000" y="-3.0000" z="0.3000" />
+			<norm x="-0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="17">
+			<pos x="-2.0000" y="-3.0000" z="-0.3000" />
+			<norm x="-0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="18">
+			<pos x="-0.5004" y="-3.0000" z="-0.3000" />
+			<norm x="0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="19">
+			<pos x="-0.5004" y="-3.0000" z="0.3000" />
+			<norm x="0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="20">
+			<pos x="-2.0000" y="-2.5000" z="0.3000" />
+			<norm x="-0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="21">
+			<pos x="-2.0000" y="-2.5000" z="-0.3000" />
+			<norm x="-0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="22">
+			<pos x="-0.5004" y="-2.5000" z="-0.3000" />
+			<norm x="0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="23">
+			<pos x="-0.5004" y="-2.5000" z="0.3000" />
+			<norm x="0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="24">
+			<pos x="2.0000" y="-2.5000" z="0.3000" />
+			<norm x="0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="25">
+			<pos x="2.0000" y="-2.5000" z="-0.3000" />
+			<norm x="0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="26">
+			<pos x="0.5004" y="-2.5000" z="-0.3000" />
+			<norm x="-0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="27">
+			<pos x="0.5004" y="-2.5000" z="0.3000" />
+			<norm x="-0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="28">
+			<pos x="2.0000" y="-3.0000" z="0.3000" />
+			<norm x="0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="29">
+			<pos x="2.0000" y="-3.0000" z="-0.3000" />
+			<norm x="0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="30">
+			<pos x="0.5004" y="-3.0000" z="-0.3000" />
+			<norm x="-0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="31">
+			<pos x="0.5004" y="-3.0000" z="0.3000" />
+			<norm x="-0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="32">
+			<pos x="-0.0002" y="0.0000" z="0.3000" />
+			<norm x="0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="33">
+			<pos x="-0.0002" y="0.0000" z="-0.3000" />
+			<norm x="0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="34">
+			<pos x="-0.5000" y="0.0000" z="-0.3000" />
+			<norm x="-0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="35">
+			<pos x="-0.5000" y="0.0000" z="0.3000" />
+			<norm x="-0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="36">
+			<pos x="-0.0002" y="-1.5000" z="0.3000" />
+			<norm x="0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="37">
+			<pos x="-0.0002" y="-1.5000" z="-0.3000" />
+			<norm x="0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="38">
+			<pos x="-0.5000" y="-1.5000" z="-0.3000" />
+			<norm x="-0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="39">
+			<pos x="-0.5000" y="-1.5000" z="0.3000" />
+			<norm x="-0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="40">
+			<pos x="0.0001" y="-1.5000" z="0.3000" />
+			<norm x="-0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="41">
+			<pos x="0.0001" y="-1.5000" z="-0.3000" />
+			<norm x="-0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="42">
+			<pos x="0.4999" y="-1.5000" z="-0.3000" />
+			<norm x="0.5773" y="-0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="43">
+			<pos x="0.4999" y="-1.5000" z="0.3000" />
+			<norm x="0.5773" y="-0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="44">
+			<pos x="0.0001" y="0.0000" z="0.3000" />
+			<norm x="-0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+		<vertex id="45">
+			<pos x="0.0001" y="0.0000" z="-0.3000" />
+			<norm x="-0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="46">
+			<pos x="0.4999" y="0.0000" z="-0.3000" />
+			<norm x="0.5773" y="0.5773" z="-0.5773" />
+		</vertex>
+		<vertex id="47">
+			<pos x="0.4999" y="0.0000" z="0.3000" />
+			<norm x="0.5773" y="0.5773" z="0.5773" />
+		</vertex>
+	</vertices>
+	<faces>
+		<quad id="0" smooth="0">
+			<corner tex_u="0.2000" tex_v="0.4000" vertex_id="3" />
+			<corner tex_u="0.2000" tex_v="0.6000" vertex_id="2" />
+			<corner tex_u="0.4000" tex_v="0.6000" vertex_id="1" />
+			<corner tex_u="0.4000" tex_v="0.4000" vertex_id="0" />
+		</quad>
+		<quad id="1" smooth="0">
+			<corner tex_u="0.4000" tex_v="0.8000" vertex_id="5" />
+			<corner tex_u="0.2000" tex_v="0.8000" vertex_id="6" />
+			<corner tex_u="0.2000" tex_v="1.0000" vertex_id="7" />
+			<corner tex_u="0.4000" tex_v="1.0000" vertex_id="4" />
+		</quad>
+		<quad id="2" smooth="0">
+			<corner tex_u="0.4000" tex_v="0.6000" vertex_id="1" />
+			<corner tex_u="0.4000" tex_v="0.8000" vertex_id="5" />
+			<corner tex_u="0.6000" tex_v="0.8000" vertex_id="4" />
+			<corner tex_u="0.6000" tex_v="0.6000" vertex_id="0" />
+		</quad>
+		<quad id="3" smooth="0">
+			<corner tex_u="0.2000" tex_v="0.6000" vertex_id="2" />
+			<corner tex_u="0.2000" tex_v="0.8000" vertex_id="6" />
+			<corner tex_u="0.4000" tex_v="0.8000" vertex_id="5" />
+			<corner tex_u="0.4000" tex_v="0.6000" vertex_id="1" />
+		</quad>
+		<quad id="4" smooth="0">
+			<corner tex_u="-0.0000" tex_v="0.6000" vertex_id="3" />
+			<corner tex_u="-0.0000" tex_v="0.8000" vertex_id="7" />
+			<corner tex_u="0.2000" tex_v="0.8000" vertex_id="6" />
+			<corner tex_u="0.2000" tex_v="0.6000" vertex_id="2" />
+		</quad>
+		<quad id="5" smooth="0">
+			<corner tex_u="0.8000" tex_v="0.8000" vertex_id="7" />
+			<corner tex_u="0.8000" tex_v="0.6000" vertex_id="3" />
+			<corner tex_u="0.6000" tex_v="0.6000" vertex_id="0" />
+			<corner tex_u="0.6000" tex_v="0.8000" vertex_id="4" />
+		</quad>
+		<quad id="6" smooth="0">
+			<corner tex_u="1.0000" tex_v="0.5000" vertex_id="8" />
+			<corner tex_u="1.0000" tex_v="0.3500" vertex_id="12" />
+			<corner tex_u="0.9000" tex_v="0.3500" vertex_id="15" />
+			<corner tex_u="0.9000" tex_v="0.5000" vertex_id="11" />
+		</quad>
+		<quad id="7" smooth="0">
+			<corner tex_u="0.6000" tex_v="0.3500" vertex_id="12" />
+			<corner tex_u="0.6000" tex_v="0.5000" vertex_id="8" />
+			<corner tex_u="0.7000" tex_v="0.5000" vertex_id="9" />
+			<corner tex_u="0.7000" tex_v="0.3500" vertex_id="13" />
+		</quad>
+		<quad id="8" smooth="0">
+			<corner tex_u="0.7000" tex_v="0.3500" vertex_id="13" />
+			<corner tex_u="0.7000" tex_v="0.5000" vertex_id="9" />
+			<corner tex_u="0.8000" tex_v="0.5000" vertex_id="10" />
+			<corner tex_u="0.8000" tex_v="0.3500" vertex_id="14" />
+		</quad>
+		<quad id="9" smooth="0">
+			<corner tex_u="0.8000" tex_v="0.3500" vertex_id="14" />
+			<corner tex_u="0.8000" tex_v="0.5000" vertex_id="10" />
+			<corner tex_u="0.9000" tex_v="0.5000" vertex_id="11" />
+			<corner tex_u="0.9000" tex_v="0.3500" vertex_id="15" />
+		</quad>
+		<quad id="10" smooth="0">
+			<corner tex_u="0.8000" tex_v="0.5000" vertex_id="10" />
+			<corner tex_u="0.7000" tex_v="0.5000" vertex_id="9" />
+			<corner tex_u="0.7000" tex_v="0.6000" vertex_id="8" />
+			<corner tex_u="0.8000" tex_v="0.6000" vertex_id="11" />
+		</quad>
+		<quad id="11" smooth="0">
+			<corner tex_u="0.7000" tex_v="0.2500" vertex_id="12" />
+			<corner tex_u="0.7000" tex_v="0.3500" vertex_id="13" />
+			<corner tex_u="0.8000" tex_v="0.3500" vertex_id="14" />
+			<corner tex_u="0.8000" tex_v="0.2500" vertex_id="15" />
+		</quad>
+		<quad id="12" smooth="0">
+			<corner tex_u="0.3108" tex_v="0.0500" vertex_id="16" />
+			<corner tex_u="0.2608" tex_v="0.0500" vertex_id="20" />
+			<corner tex_u="0.2608" tex_v="0.2000" vertex_id="23" />
+			<corner tex_u="0.3108" tex_v="0.2000" vertex_id="19" />
+		</quad>
+		<quad id="13" smooth="0">
+			<corner tex_u="0.3108" tex_v="-0.0000" vertex_id="20" />
+			<corner tex_u="0.3108" tex_v="0.0500" vertex_id="16" />
+			<corner tex_u="0.3708" tex_v="0.0500" vertex_id="17" />
+			<corner tex_u="0.3708" tex_v="-0.0000" vertex_id="21" />
+		</quad>
+		<quad id="14" smooth="0">
+			<corner tex_u="0.4258" tex_v="0.0500" vertex_id="21" />
+			<corner tex_u="0.3708" tex_v="0.0500" vertex_id="17" />
+			<corner tex_u="0.3708" tex_v="0.2000" vertex_id="18" />
+			<corner tex_u="0.4258" tex_v="0.2000" vertex_id="22" />
+		</quad>
+		<quad id="15" smooth="0">
+			<corner tex_u="0.3708" tex_v="0.2500" vertex_id="22" />
+			<corner tex_u="0.3708" tex_v="0.2000" vertex_id="18" />
+			<corner tex_u="0.3108" tex_v="0.2000" vertex_id="19" />
+			<corner tex_u="0.3108" tex_v="0.2500" vertex_id="23" />
+		</quad>
+		<quad id="16" smooth="0">
+			<corner tex_u="0.3708" tex_v="0.2000" vertex_id="18" />
+			<corner tex_u="0.3708" tex_v="0.0500" vertex_id="17" />
+			<corner tex_u="0.3108" tex_v="0.0500" vertex_id="16" />
+			<corner tex_u="0.3108" tex_v="0.2000" vertex_id="19" />
+		</quad>
+		<quad id="17" smooth="0">
+			<corner tex_u="0.4808" tex_v="0.0500" vertex_id="20" />
+			<corner tex_u="0.4258" tex_v="0.0500" vertex_id="21" />
+			<corner tex_u="0.4258" tex_v="0.2000" vertex_id="22" />
+			<corner tex_u="0.4808" tex_v="0.2000" vertex_id="23" />
+		</quad>
+		<quad id="18" smooth="0">
+			<corner tex_u="0.1650" tex_v="0.2000" vertex_id="27" />
+			<corner tex_u="0.2200" tex_v="0.2000" vertex_id="26" />
+			<corner tex_u="0.2200" tex_v="0.0500" vertex_id="25" />
+			<corner tex_u="0.1650" tex_v="0.0500" vertex_id="24" />
+		</quad>
+		<quad id="19" smooth="0">
+			<corner tex_u="0.0500" tex_v="0.0500" vertex_id="29" />
+			<corner tex_u="0.0500" tex_v="0.2000" vertex_id="30" />
+			<corner tex_u="0.1100" tex_v="0.2000" vertex_id="31" />
+			<corner tex_u="0.1100" tex_v="0.0500" vertex_id="28" />
+		</quad>
+		<quad id="20" smooth="0">
+			<corner tex_u="0.0500" tex_v="-0.0000" vertex_id="25" />
+			<corner tex_u="0.0500" tex_v="0.0500" vertex_id="29" />
+			<corner tex_u="0.1100" tex_v="0.0500" vertex_id="28" />
+			<corner tex_u="0.1100" tex_v="-0.0000" vertex_id="24" />
+		</quad>
+		<quad id="21" smooth="0">
+			<corner tex_u="0.0000" tex_v="0.2000" vertex_id="26" />
+			<corner tex_u="0.0500" tex_v="0.2000" vertex_id="30" />
+			<corner tex_u="0.0500" tex_v="0.0500" vertex_id="29" />
+			<corner tex_u="0.0000" tex_v="0.0500" vertex_id="25" />
+		</quad>
+		<quad id="22" smooth="0">
+			<corner tex_u="0.1100" tex_v="0.2500" vertex_id="27" />
+			<corner tex_u="0.1100" tex_v="0.2000" vertex_id="31" />
+			<corner tex_u="0.0500" tex_v="0.2000" vertex_id="30" />
+			<corner tex_u="0.0500" tex_v="0.2500" vertex_id="26" />
+		</quad>
+		<quad id="23" smooth="0">
+			<corner tex_u="0.1100" tex_v="0.2000" vertex_id="31" />
+			<corner tex_u="0.1650" tex_v="0.2000" vertex_id="27" />
+			<corner tex_u="0.1650" tex_v="0.0500" vertex_id="24" />
+			<corner tex_u="0.1100" tex_v="0.0500" vertex_id="28" />
+		</quad>
+		<quad id="24" smooth="0">
+			<corner tex_u="0.8308" tex_v="0.0000" vertex_id="35" />
+			<corner tex_u="0.8308" tex_v="0.0500" vertex_id="34" />
+			<corner tex_u="0.8908" tex_v="0.0500" vertex_id="33" />
+			<corner tex_u="0.8908" tex_v="0.0000" vertex_id="32" />
+		</quad>
+		<quad id="25" smooth="0">
+			<corner tex_u="0.8908" tex_v="0.2000" vertex_id="37" />
+			<corner tex_u="0.8308" tex_v="0.2000" vertex_id="38" />
+			<corner tex_u="0.8308" tex_v="0.2500" vertex_id="39" />
+			<corner tex_u="0.8908" tex_v="0.2500" vertex_id="36" />
+		</quad>
+		<quad id="26" smooth="0">
+			<corner tex_u="0.8908" tex_v="0.0500" vertex_id="33" />
+			<corner tex_u="0.8908" tex_v="0.2000" vertex_id="37" />
+			<corner tex_u="0.9458" tex_v="0.2000" vertex_id="36" />
+			<corner tex_u="0.9458" tex_v="0.0500" vertex_id="32" />
+		</quad>
+		<quad id="27" smooth="0">
+			<corner tex_u="0.8308" tex_v="0.0500" vertex_id="34" />
+			<corner tex_u="0.8308" tex_v="0.2000" vertex_id="38" />
+			<corner tex_u="0.8908" tex_v="0.2000" vertex_id="37" />
+			<corner tex_u="0.8908" tex_v="0.0500" vertex_id="33" />
+		</quad>
+		<quad id="28" smooth="0">
+			<corner tex_u="0.7808" tex_v="0.0500" vertex_id="35" />
+			<corner tex_u="0.7808" tex_v="0.2000" vertex_id="39" />
+			<corner tex_u="0.8308" tex_v="0.2000" vertex_id="38" />
+			<corner tex_u="0.8308" tex_v="0.0500" vertex_id="34" />
+		</quad>
+		<quad id="29" smooth="0">
+			<corner tex_u="1.0008" tex_v="0.2000" vertex_id="39" />
+			<corner tex_u="1.0008" tex_v="0.0500" vertex_id="35" />
+			<corner tex_u="0.9458" tex_v="0.0500" vertex_id="32" />
+			<corner tex_u="0.9458" tex_v="0.2000" vertex_id="36" />
+		</quad>
+		<quad id="30" smooth="0">
+			<corner tex_u="0.7400" tex_v="0.2000" vertex_id="40" />
+			<corner tex_u="0.7400" tex_v="0.0500" vertex_id="44" />
+			<corner tex_u="0.6850" tex_v="0.0500" vertex_id="47" />
+			<corner tex_u="0.6850" tex_v="0.2000" vertex_id="43" />
+		</quad>
+		<quad id="31" smooth="0">
+			<corner tex_u="0.5200" tex_v="0.0500" vertex_id="44" />
+			<corner tex_u="0.5200" tex_v="0.2000" vertex_id="40" />
+			<corner tex_u="0.5700" tex_v="0.2000" vertex_id="41" />
+			<corner tex_u="0.5700" tex_v="0.0500" vertex_id="45" />
+		</quad>
+		<quad id="32" smooth="0">
+			<corner tex_u="0.5700" tex_v="0.0500" vertex_id="45" />
+			<corner tex_u="0.5700" tex_v="0.2000" vertex_id="41" />
+			<corner tex_u="0.6300" tex_v="0.2000" vertex_id="42" />
+			<corner tex_u="0.6300" tex_v="0.0500" vertex_id="46" />
+		</quad>
+		<quad id="33" smooth="0">
+			<corner tex_u="0.6300" tex_v="0.0500" vertex_id="46" />
+			<corner tex_u="0.6300" tex_v="0.2000" vertex_id="42" />
+			<corner tex_u="0.6850" tex_v="0.2000" vertex_id="43" />
+			<corner tex_u="0.6850" tex_v="0.0500" vertex_id="47" />
+		</quad>
+		<quad id="34" smooth="0">
+			<corner tex_u="0.6300" tex_v="0.2000" vertex_id="42" />
+			<corner tex_u="0.5700" tex_v="0.2000" vertex_id="41" />
+			<corner tex_u="0.5700" tex_v="0.2500" vertex_id="40" />
+			<corner tex_u="0.6300" tex_v="0.2500" vertex_id="43" />
+		</quad>
+		<quad id="35" smooth="0">
+			<corner tex_u="0.5700" tex_v="0.0000" vertex_id="44" />
+			<corner tex_u="0.5700" tex_v="0.0500" vertex_id="45" />
+			<corner tex_u="0.6300" tex_v="0.0500" vertex_id="46" />
+			<corner tex_u="0.6300" tex_v="0.0000" vertex_id="47" />
+		</quad>
+	</faces>
+	<subsets>
+		<subset id="0" name="Material">
+			<diffuse a="1.0000" b="0.7562" g="0.7562" r="0.7562" />
+			<specular a="1.0000" b="1.0000" g="1.0000" r="1.0000" />
+			<emission a="0.0000" b="0.0000" g="0.0000" r="0.0000" />
+			<faces>
+				<quad id="0" />
+				<quad id="1" />
+				<quad id="2" />
+				<quad id="3" />
+				<quad id="4" />
+				<quad id="5" />
+				<quad id="6" />
+				<quad id="7" />
+				<quad id="8" />
+				<quad id="9" />
+				<quad id="10" />
+				<quad id="11" />
+				<quad id="12" />
+				<quad id="13" />
+				<quad id="14" />
+				<quad id="15" />
+				<quad id="16" />
+				<quad id="17" />
+				<quad id="18" />
+				<quad id="19" />
+				<quad id="20" />
+				<quad id="21" />
+				<quad id="22" />
+				<quad id="23" />
+				<quad id="24" />
+				<quad id="25" />
+				<quad id="26" />
+				<quad id="27" />
+				<quad id="28" />
+				<quad id="29" />
+				<quad id="30" />
+				<quad id="31" />
+				<quad id="32" />
+				<quad id="33" />
+				<quad id="34" />
+				<quad id="35" />
+			</faces>
+		</subset>
+	</subsets>
+	<armature>
+		<bones>
+			<bone id="head" parent_id="torso" tail_x="-0.0114" tail_y="4.0065"
+				tail_z="-0.0047" weight="1.0000" x="-0.0067" y="3.0014" z="-0.0046">
+				<vertices>
+					<vertex id="0" />
+					<vertex id="1" />
+					<vertex id="2" />
+					<vertex id="3" />
+					<vertex id="4" />
+					<vertex id="5" />
+					<vertex id="6" />
+					<vertex id="7" />
+				</vertices>
+			</bone>
+			<bone id="rightarm" parent_id="rightshoulder" tail_x="-2.0030"
+				tail_y="2.7467" tail_z="-0.0046" weight="1.0000" x="-0.4957" y="2.7559"
+				z="-0.0046">
+				<vertices>
+					<vertex id="16" />
+					<vertex id="17" />
+					<vertex id="18" />
+					<vertex id="19" />
+					<vertex id="20" />
+					<vertex id="21" />
+					<vertex id="22" />
+					<vertex id="23" />
+				</vertices>
+			</bone>
+			<bone id="leftarm" parent_id="leftshoulder" tail_x="1.9942"
+				tail_y="2.7559" tail_z="-0.0046" weight="1.0000" x="0.4962" y="2.7513"
+				z="-0.0046">
+				<vertices>
+					<vertex id="24" />
+					<vertex id="25" />
+					<vertex id="26" />
+					<vertex id="27" />
+					<vertex id="28" />
+					<vertex id="29" />
+					<vertex id="30" />
+					<vertex id="31" />
+				</vertices>
+			</bone>
+			<bone id="righthip" parent_id="base" tail_x="-0.2539" tail_y="1.5054"
+				tail_z="0.0000" weight="1.0000" x="-0.0067" y="1.5054" z="0.0000" />
+			<bone id="lefthip" parent_id="base" tail_x="0.2457" tail_y="1.5054"
+				tail_z="0.0000" weight="1.0000" x="-0.0067" y="1.5054" z="0.0000" />
+			<bone id="rightleg" parent_id="righthip" tail_x="-0.2539"
+				tail_y="0.0047" tail_z="-0.0000" weight="1.0000" x="-0.2539" y="1.5054"
+				z="0.0000">
+				<vertices>
+					<vertex id="32" />
+					<vertex id="33" />
+					<vertex id="34" />
+					<vertex id="35" />
+					<vertex id="36" />
+					<vertex id="37" />
+					<vertex id="38" />
+					<vertex id="39" />
+				</vertices>
+			</bone>
+			<bone id="base" tail_x="-0.0067" tail_y="1.5054" tail_z="0.0000"
+				weight="1.0000" x="0.0000" y="1.5054" z="-0.7737" />
+			<bone id="leftleg" parent_id="lefthip" tail_x="0.2457" tail_y="0.0047"
+				tail_z="-0.0000" weight="1.0000" x="0.2457" y="1.5054" z="0.0000">
+				<vertices>
+					<vertex id="40" />
+					<vertex id="41" />
+					<vertex id="42" />
+					<vertex id="43" />
+					<vertex id="44" />
+					<vertex id="45" />
+					<vertex id="46" />
+					<vertex id="47" />
+				</vertices>
+			</bone>
+			<bone id="leftshoulder" parent_id="torso" tail_x="0.4962"
+				tail_y="2.7513" tail_z="-0.0046" weight="1.0000" x="-0.0067" y="3.0014"
+				z="-0.0046" />
+			<bone id="torso" parent_id="base" tail_x="-0.0067" tail_y="3.0014"
+				tail_z="-0.0046" weight="1.0000" x="-0.0067" y="1.5054" z="0.0000">
+				<vertices>
+					<vertex id="8" />
+					<vertex id="9" />
+					<vertex id="10" />
+					<vertex id="11" />
+					<vertex id="12" />
+					<vertex id="13" />
+					<vertex id="14" />
+					<vertex id="15" />
+				</vertices>
+			</bone>
+			<bone id="rightshoulder" parent_id="torso" tail_x="-0.4957"
+				tail_y="2.7559" tail_z="-0.0046" weight="1.0000" x="-0.0067" y="3.0014"
+				z="-0.0046" />
+		</bones>
+		<animations>
+			<animation length="15" name="shoot">
+				<layer bone_id="head">
+					<key frame="0" rot_w="0.9989" rot_x="-0.0094" rot_y="0.0004"
+						rot_z="-0.0465" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="5" rot_w="0.9944" rot_x="-0.1056" rot_y="0.0000"
+						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="15" rot_w="0.9987" rot_x="-0.0000" rot_y="0.0005"
+						rot_z="-0.0510" x="0.0000" y="0.0000" z="0.0000" />
+				</layer>
+				<layer bone_id="rightarm">
+					<key frame="0" rot_w="0.4999" rot_x="0.4929" rot_y="-0.5013"
+						rot_z="-0.5058" x="-0.0001" y="-0.0117" z="0.1071" />
+					<key frame="5" rot_w="0.4478" rot_x="0.4405" rot_y="-0.5484"
+						rot_z="-0.5521" x="-0.0001" y="-0.0117" z="0.1071" />
+					<key frame="15" rot_w="0.5047" rot_x="0.4978" rot_y="-0.4965"
+						rot_z="-0.5010" x="-0.0001" y="-0.0117" z="0.1071" />
+				</layer>
+				<layer bone_id="leftarm">
+					<key frame="0" rot_w="0.4033" rot_x="0.3925" rot_y="0.5582"
+						rot_z="0.6097" x="-0.0000" y="-0.0117" z="-0.1071" />
+					<key frame="5" rot_w="0.5544" rot_x="0.4803" rot_y="0.3052"
+						rot_z="0.6074" x="-0.0000" y="-0.0117" z="-0.1071" />
+					<key frame="15" rot_w="0.3865" rot_x="0.3819" rot_y="0.5801"
+						rot_z="0.6068" x="-0.0000" y="-0.0117" z="-0.1071" />
+				</layer>
+				<layer bone_id="rightleg">
+					<key frame="0" rot_w="1.0000" rot_x="0.0089" rot_y="0.0000"
+						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="5" rot_w="0.9950" rot_x="0.1003" rot_y="0.0000"
+						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="15" rot_w="1.0000" rot_x="-0.0000" rot_y="0.0000"
+						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
+				</layer>
+				<layer bone_id="leftleg">
+					<key frame="0" rot_w="0.9976" rot_x="-0.0065" rot_y="0.0004"
+						rot_z="-0.0691" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="5" rot_w="0.9949" rot_x="-0.0729" rot_y="0.0051"
+						rot_z="-0.0690" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="15" rot_w="0.9976" rot_x="-0.0001" rot_y="0.0000"
+						rot_z="-0.0692" x="0.0000" y="0.0000" z="0.0000" />
+				</layer>
+				<layer bone_id="leftshoulder">
+					<key frame="0" rot_w="1.0000" rot_x="0.0000" rot_y="0.0097"
+						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="5" rot_w="0.9941" rot_x="-0.0000" rot_y="0.1086"
+						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="15" rot_w="1.0000" rot_x="-0.0000" rot_y="0.0000"
+						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
+				</layer>
+				<layer bone_id="torso">
+					<key frame="0" rot_w="1.0000" rot_x="0.0055" rot_y="-0.0000"
+						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="5" rot_w="0.9981" rot_x="0.0618" rot_y="-0.0000"
+						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="15" rot_w="1.0000" rot_x="-0.0000" rot_y="0.0000"
+						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
+				</layer>
+				<layer bone_id="rightshoulder">
+					<key frame="0" rot_w="1.0000" rot_x="-0.0000" rot_y="0.0097"
+						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="5" rot_w="0.9941" rot_x="0.0000" rot_y="0.1086"
+						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="15" rot_w="1.0000" rot_x="-0.0000" rot_y="0.0000"
+						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
+				</layer>
+			</animation>
+			<animation length="20" name="walk">
+				<layer bone_id="rightarm">
+					<key frame="0" rot_w="0.7551" rot_x="-0.1837" rot_y="0.1487"
+						rot_z="-0.6115" x="-0.0001" y="-0.0117" z="0.1071" />
+					<key frame="10" rot_w="0.7534" rot_x="0.1904" rot_y="-0.1542"
+						rot_z="-0.6101" x="-0.0001" y="-0.0117" z="0.1071" />
+					<key frame="20" rot_w="0.7531" rot_x="-0.1917" rot_y="0.1552"
+						rot_z="-0.6099" x="-0.0001" y="-0.0117" z="0.1071" />
+				</layer>
+				<layer bone_id="leftarm">
+					<key frame="0" rot_w="0.7520" rot_x="0.1834" rot_y="0.1500"
+						rot_z="0.6151" x="-0.0000" y="-0.0117" z="-0.1071" />
+					<key frame="10" rot_w="0.7498" rot_x="-0.1922" rot_y="-0.1572"
+						rot_z="0.6133" x="-0.0000" y="-0.0117" z="-0.1071" />
+					<key frame="20" rot_w="0.7500" rot_x="0.1914" rot_y="0.1566"
+						rot_z="0.6135" x="-0.0000" y="-0.0117" z="-0.1071" />
+				</layer>
+				<layer bone_id="rightleg">
+					<key frame="0" rot_w="0.9745" rot_x="0.2243" rot_y="0.0000"
+						rot_z="0.0061" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="10" rot_w="0.9704" rot_x="-0.2415" rot_y="-0.0000"
+						rot_z="-0.0066" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="20" rot_w="0.9721" rot_x="0.2343" rot_y="0.0000"
+						rot_z="0.0064" x="0.0000" y="0.0000" z="0.0000" />
+				</layer>
+				<layer bone_id="leftleg">
+					<key frame="0" rot_w="0.9722" rot_x="-0.2341" rot_y="0.0000"
+						rot_z="-0.0049" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="10" rot_w="0.9717" rot_x="0.2360" rot_y="-0.0000"
+						rot_z="0.0050" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="20" rot_w="0.9697" rot_x="-0.2442" rot_y="0.0000"
+						rot_z="-0.0051" x="0.0000" y="0.0000" z="0.0000" />
+				</layer>
+			</animation>
+		</animations>
+	</armature>
+</mesh>
+

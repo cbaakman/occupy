@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.Future;
+import java.awt.image.BufferedImage;
 
 import javax.swing.JFrame;
 
@@ -27,6 +28,7 @@ import java.security.InvalidKeyException;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.imageio.ImageIO;
 
 import net.cbaakman.occupy.Updatable;
 import net.cbaakman.occupy.Update;
@@ -47,6 +49,7 @@ import net.cbaakman.occupy.font.FontFactory;
 import net.cbaakman.occupy.font.SVGStyle;
 import net.cbaakman.occupy.load.LoadJob;
 import net.cbaakman.occupy.load.Loader;
+import net.cbaakman.occupy.mesh.MeshFactory;
 import net.cbaakman.occupy.render.ClientGLEventListener;
 import net.cbaakman.occupy.render.LoadGLEventListener;
 import net.cbaakman.occupy.security.SSLChannel;
@@ -192,12 +195,7 @@ public abstract class Client {
 
 			@Override
 			public FontFactory call() throws Exception {
-				return FontFactory.parse(ClientGLEventListener.class.getResourceAsStream("/font/Lumean.svg"));
-			}
-
-			@Override
-			public boolean isReady() {
-				return true;
+				return FontFactory.parse(Client.class.getResourceAsStream("/font/Lumean.svg"));
 			}
 		});
 		loader.add(new LoadJob<Font>(){
@@ -210,6 +208,20 @@ public abstract class Client {
 			@Override
 			public boolean isReady() {
 				return fFactory.isDone();
+			}
+		});
+		Future<BufferedImage> fInfantryImage = loader.add(new LoadJob<BufferedImage>(){
+
+			@Override
+			public BufferedImage call() throws Exception {
+				return ImageIO.read(Client.class.getResourceAsStream("/image/infantry.png"));
+			}
+		});
+		Future<MeshFactory> fInfantryMeshFactory = loader.add(new LoadJob<MeshFactory>() {
+
+			@Override
+			public MeshFactory call() throws Exception {
+				return MeshFactory.parse(Client.class.getResourceAsStream("/mesh/infantry.xml"));
 			}
 		});
 		loader.start();

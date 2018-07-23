@@ -71,6 +71,7 @@ public class FontFactory {
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder = factory.newDocumentBuilder();
 		Document document = builder.parse(is);
+		is.close();
 		
 		Element svg = document.getDocumentElement();
 		if (!svg.getTagName().equalsIgnoreCase("svg"))
