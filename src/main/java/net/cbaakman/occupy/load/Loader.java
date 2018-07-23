@@ -31,7 +31,7 @@ public class Loader {
 	}
 	
 	private List<LoadJobEntry> jobs = new ArrayList<LoadJobEntry>();
-	private int nJobsDone = 0;
+	private Integer nJobsDone = 0;
 
 	public int countJobsLeft() {
 		synchronized(jobs) {
@@ -39,7 +39,9 @@ public class Loader {
 		}
 	}
 	public int getJobsDone() {
-		return nJobsDone;
+		synchronized(nJobsDone) {
+			return nJobsDone;
+		}
 	}
 
 	private LoadJobEntry pickJobToRun() {
@@ -63,7 +65,9 @@ public class Loader {
 		} catch (Exception e) {
 			entry.error = e;
 		}
-		nJobsDone++;
+		synchronized(nJobsDone) {
+			nJobsDone++;
+		}
 	}
 	
 	private class LoaderThread extends Thread {
@@ -73,6 +77,12 @@ public class Loader {
 				LoadJobEntry entry = pickJobToRun();
 				if (entry != null)
 					runJob(entry);
+				else
+					try {
+						Thread.currentThread().sleep(1000);
+					} catch (InterruptedException e) {
+						logger.error(e.getMessage(), e);
+					}
 			}
 		}
 	}
