@@ -14,8 +14,10 @@ import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.glu.GLU;
+import com.jogamp.opengl.math.FloatUtil;
 
 import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.error.GL3Error;
 import net.cbaakman.occupy.errors.MissingGlyphError;
 import net.cbaakman.occupy.errors.ParseError;
 import net.cbaakman.occupy.errors.SeriousErrorHandler;
@@ -37,28 +39,47 @@ public class ClientGLEventListener implements GLEventListener {
 
 	@Override
 	public void display(GLAutoDrawable drawable) {
-		GL2 gl2 = drawable.getGL().getGL2();
+		GL3 gl3 = drawable.getGL().getGL3();
+		
+		float[] projectionMatrix = new float[16],
+				modelviewMatrix = new float[16];
 
-        // Projection.
-        gl2.glMatrixMode(GL2.GL_PROJECTION);
-        gl2.glLoadIdentity();
-        gl2.glOrtho(0.0f, client.getGLCanvas().getWidth(),
-        			0.0f, client.getGLCanvas().getHeight(), -1.0f, 1.0f);
+		FloatUtil.makeOrtho(projectionMatrix, 0, true, 0.0f, client.getGLCanvas().getWidth(),
+        											   0.0f, client.getGLCanvas().getHeight(), -1.0f, 1.0f);
+		FloatUtil.makeIdentity(modelviewMatrix);
 
-		// Change to model view matrix.
-        gl2.glMatrixMode(GL2.GL_MODELVIEW);
-        gl2.glLoadIdentity();
+		int error = gl3.glGetError();
+        if (error != GL3.GL_NO_ERROR)
+			SeriousErrorHandler.handle(new GL3Error(error));
         
-        gl2.glClearColor(0.0f, 0.5f, 0.5f, 1.0f);
-        gl2.glClear(GL2.GL_COLOR_BUFFER_BIT);
-
-        gl2.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-        gl2.glEnable(GL2.GL_TEXTURE_2D);
-        gl2.glEnable(GL2.GL_BLEND);
-        gl2.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
+        gl3.glClearColor(0.0f, 0.5f, 0.5f, 1.0f);
         
+        error = gl3.glGetError();
+        if (error != GL3.GL_NO_ERROR)
+			SeriousErrorHandler.handle(new GL3Error(error));
+        
+        gl3.glClear(GL3.GL_COLOR_BUFFER_BIT);
+        
+        error = gl3.glGetError();
+        if (error != GL3.GL_NO_ERROR)
+			SeriousErrorHandler.handle(new GL3Error(error));
+        
+        gl3.glEnable(GL3.GL_BLEND);
+        
+        error = gl3.glGetError();
+        if (error != GL3.GL_NO_ERROR)
+			SeriousErrorHandler.handle(new GL3Error(error));
+        
+        gl3.glBlendFunc(GL3.GL_SRC_ALPHA, GL3.GL_ONE_MINUS_SRC_ALPHA);
+        
+		error = gl3.glGetError();
+        if (error != GL3.GL_NO_ERROR)
+			SeriousErrorHandler.handle(new GL3Error(error));
+        
+        float[] resultMatrix = new  float[16];
+        FloatUtil.multMatrix(projectionMatrix, modelviewMatrix, resultMatrix);
         try {
-			glTextRenderer.renderTextLeftAlign(gl2, "Hello!");
+			glTextRenderer.renderTextLeftAlign(gl3, resultMatrix, "Hello!");
 		} catch (MissingGlyphError e) {
 			SeriousErrorHandler.handle(e);
 		}
@@ -66,15 +87,15 @@ public class ClientGLEventListener implements GLEventListener {
 
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
-		GL2 gl2 = drawable.getGL().getGL2();
-		glTextRenderer.cleanupGL(gl2);
+		GL3 gl3 = drawable.getGL().getGL3();
+		glTextRenderer.cleanupGL(gl3);
 	}
 
 	@Override
 	public void init(GLAutoDrawable drawable) {
-		GL2 gl2 = drawable.getGL().getGL2();
+		GL3 gl3 = drawable.getGL().getGL3();
 
-		glTextRenderer = new GLTextRenderer(gl2, font);
+		glTextRenderer = new GLTextRenderer(gl3, font);
 	}
 
 	@Override

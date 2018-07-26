@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.awt.image.BufferedImage;
 
@@ -21,6 +22,7 @@ import javax.swing.JFrame;
 import org.apache.log4j.Logger;
 
 import com.jogamp.opengl.GLCapabilities;
+import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
 import java.security.InvalidKeyException;
@@ -191,6 +193,7 @@ public abstract class Client {
 	protected void onInit() throws InitError {
 		
 		Loader loader = new Loader(config.getLoadConcurrency());
+		
 		final Future<FontFactory> fFactory = loader.add(new LoadJob<FontFactory>() {
 
 			@Override
@@ -198,7 +201,7 @@ public abstract class Client {
 				return FontFactory.parse(Client.class.getResourceAsStream("/font/Lumean.svg"));
 			}
 		});
-		loader.add(new LoadJob<Font>(){
+		final Future<Font> fFont = loader.add(new LoadJob<Font>(){
 
 			@Override
 			public Font call() throws Exception {
@@ -224,9 +227,23 @@ public abstract class Client {
 				return MeshFactory.parse(Client.class.getResourceAsStream("/mesh/infantry.xml"));
 			}
 		});
+		loader.whenDone(new Runnable() {
+			@Override
+			public void run() {
+				GLEventListener listener0 = glCanvas.getGLEventListener(0);
+				glCanvas.removeGLEventListener(listener0);
+				
+				try {
+					glCanvas.addGLEventListener(new ClientGLEventListener(Client.this, fFont.get()));
+				} catch (InterruptedException | ExecutionException e) {
+
+					SeriousErrorHandler.handle(e);
+				}
+			}
+		});
 		loader.start();
 
-		GLProfile profile = GLProfile.get(GLProfile.GL2);
+		GLProfile profile = GLProfile.get(GLProfile.GL3);
 		GLCapabilities capabilities = new GLCapabilities(profile);
 	
 		glCanvas = new GLCanvas(capabilities);

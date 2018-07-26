@@ -84,7 +84,17 @@ public class Loader {
 						logger.error(e.getMessage(), e);
 					}
 			}
+			
+			if (countThreadsAlive() <= 1)  // am I the last worker thread?
+				if (runWhenDone != null)
+					runWhenDone.run();
 		}
+	}
+	
+	private Runnable runWhenDone = null;
+
+	public void whenDone(Runnable runnable) {
+		this.runWhenDone = runnable;
 	}
 	
 	private List<LoaderThread> threads = new ArrayList<LoaderThread>();
@@ -92,13 +102,29 @@ public class Loader {
 	public Loader(int nConcurrent) {
 		
 		int i;
-		for (i = 0; i < nConcurrent; i++)
-			threads.add(new LoaderThread());
+		synchronized(threads) {
+			for (i = 0; i < nConcurrent; i++)
+				threads.add(new LoaderThread());
+		}
 	}
 	
 	public void start() {
-		for (LoaderThread t : threads)
-			t.start();
+		synchronized(threads) {
+			for (LoaderThread t : threads)
+				t.start();
+		}
+	}
+	
+	public int countThreadsAlive() {
+
+		int count = 0;
+		synchronized(threads) {
+			for (LoaderThread t : threads) {
+				if (t.isAlive())
+					count++;
+			}
+		}
+		return count;
 	}
 	
 	public <T> Future<T> add(LoadJob<T> job) {
