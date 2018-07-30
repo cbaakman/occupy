@@ -23,7 +23,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
 import lombok.Data;
-import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.errors.SeriousError;
 
 public class SSLChannel {
 
@@ -36,32 +36,19 @@ public class SSLChannel {
 	}
 	
 	
-	private static KeyPair buildKeyPair() {
+	private static KeyPair buildKeyPair() throws NoSuchAlgorithmException {
         final int keySize = 2048;
-		try {
-			KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-	        keyPairGenerator.initialize(keySize);      
-	        return keyPairGenerator.genKeyPair();
-	        
-		} catch (NoSuchAlgorithmException e) {
-			// Should not happen with RSA
-			SeriousErrorHandler.handle(e);
-			return null;
-		}
+		KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+        keyPairGenerator.initialize(keySize);      
+        return keyPairGenerator.genKeyPair();
     }
 
 	private static byte[] encrypt(PublicKey key, byte[] data) throws InvalidKeyException,
 	                                                                 IllegalBlockSizeException,
 	                                                                 BadPaddingException,
-	                                                                 NoSuchPaddingException {
-        Cipher cipher;
-		try {
-			cipher = Cipher.getInstance("RSA");
-		} catch (NoSuchAlgorithmException e) {
-			// Should not happen with RSA!
-			SeriousErrorHandler.handle(e);
-			return null;
-		}  
+	                                                                 NoSuchPaddingException,
+	                                                                 NoSuchAlgorithmException {
+        Cipher cipher = Cipher.getInstance("RSA");
         cipher.init(Cipher.ENCRYPT_MODE, key);  
 
         return cipher.doFinal(data);  
@@ -70,67 +57,79 @@ public class SSLChannel {
 	private static byte[] decrypt(PrivateKey key, byte[] encrypted) throws NoSuchPaddingException, 
 																		   InvalidKeyException,
 																		   IllegalBlockSizeException,
-																		   BadPaddingException {
-        Cipher cipher;
-		try {
-			cipher = Cipher.getInstance("RSA");
-		} catch (NoSuchAlgorithmException e) {
-			// Should not happen with RSA!
-			SeriousErrorHandler.handle(e);
-			return null;
-		}  
+																		   BadPaddingException,
+																		   NoSuchAlgorithmException {
+        Cipher cipher = Cipher.getInstance("RSA");
         cipher.init(Cipher.DECRYPT_MODE, key);
         
         return cipher.doFinal(encrypted);
 	}
 	
-	public void send(byte[] data) throws IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException {
-			
+	public void send(byte[] data) throws IOException, InvalidKeyException, SeriousError {
+		// Wait for public key:
+		ObjectInputStream ois = new ObjectInputStream(is);
+		PublicKey publicKey;
 		try {
-			// Wait for public key:
-			ObjectInputStream ois = new ObjectInputStream(is);
-			PublicKey publicKey = (PublicKey)ois.readObject();
-			
-			// Encrypt metadata with public key:
-			Metadata metadata = new Metadata(data.length);
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			ObjectOutputStream oos = new ObjectOutputStream(baos);
-			oos.writeObject(metadata);;
-			oos.close();
-			byte[] encrypted = encrypt(publicKey, baos.toByteArray());
+			publicKey = (PublicKey)ois.readObject();
+		} catch (ClassNotFoundException e) {
+			throw new SeriousError(e);
+		}
+		
+		// Encrypt metadata with public key:
+		Metadata metadata = new Metadata(data.length);
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ObjectOutputStream oos = new ObjectOutputStream(baos);
+		oos.writeObject(metadata);;
+		oos.close();
+		byte[] encrypted;
+		try {
+			encrypted = encrypt(publicKey, baos.toByteArray());
+		} catch (IllegalBlockSizeException | BadPaddingException | NoSuchPaddingException
+				| NoSuchAlgorithmException e) {
+			throw new SeriousError(e);
+		}
 
-			// Send encrypted metadata:
-			os.write(encrypted);
-			os.flush();
-			
-			// Data chunks must not be longer than 245 bytes
-			int i, f;
-			for (i = 0; i < data.length; i += 245) {
-				f = Math.min(i + 245, data.length);
-			
-				// Wait for public key:
-				ois = new ObjectInputStream(is);
+		// Send encrypted metadata:
+		os.write(encrypted);
+		os.flush();
+		
+		// Data chunks must not be longer than 245 bytes
+		int i, f;
+		for (i = 0; i < data.length; i += 245) {
+			f = Math.min(i + 245, data.length);
+		
+			// Wait for public key:
+			ois = new ObjectInputStream(is);
+			try {
 				publicKey = (PublicKey)ois.readObject();
-				
-				// Encrypt with public key:
-				encrypted = encrypt(publicKey, Arrays.copyOfRange(data, i, f));
-				
-				// Send encrypted data:
-				os.write(encrypted);
-				os.flush();
+			} catch (ClassNotFoundException e) {
+				throw new SeriousError(e);
 			}
 			
-		} catch (ClassNotFoundException e) {
-			// Public key class should be present!
-			SeriousErrorHandler.handle(e);
+			// Encrypt with public key:
+			try {
+				encrypted = encrypt(publicKey, Arrays.copyOfRange(data, i, f));
+			} catch (IllegalBlockSizeException | BadPaddingException | NoSuchPaddingException
+					| NoSuchAlgorithmException e) {
+				throw new SeriousError(e);
+			}
+			
+			// Send encrypted data:
+			os.write(encrypted);
+			os.flush();
 		}
 	}
 	
-	public byte[] receive() throws IOException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+	public byte[] receive() throws IOException, SeriousError {
 
 		ByteArrayOutputStream aos = new ByteArrayOutputStream();
 		
-		KeyPair keyPair = buildKeyPair();
+		KeyPair keyPair;
+		try {
+			keyPair = buildKeyPair();
+		} catch (NoSuchAlgorithmException e) {
+			throw new SeriousError(e);
+		}
 		
 		// Send public key:
 		ObjectOutputStream oos = new ObjectOutputStream(os);
@@ -142,21 +141,29 @@ public class SSLChannel {
 		is.read(encrypted, 0, encrypted.length);
 		
 		// Decrypt metadata;
-		byte[] data = decrypt(keyPair.getPrivate(), encrypted);
+		byte[] data;
+		try {
+			data = decrypt(keyPair.getPrivate(), encrypted);
+		} catch (NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException
+				| NoSuchAlgorithmException | InvalidKeyException e) {
+			throw new SeriousError(e);
+		}
 		ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
 		Metadata metadata;
 		try {
 			metadata = (Metadata)ois.readObject();
-			ois.close();
 		} catch (ClassNotFoundException e) {
-			// This class should be present!
-			SeriousErrorHandler.handle(e);
-			return null;
+			throw new SeriousError(e);
 		}
+		ois.close();
 		
 		// Data is decrypted from chunks of 256 bytes.
 		while (aos.size() < metadata.getDataLength()) {			
-			keyPair = buildKeyPair();
+			try {
+				keyPair = buildKeyPair();
+			} catch (NoSuchAlgorithmException e) {
+				throw new SeriousError(e);
+			}
 			
 			// Send public key:
 			oos = new ObjectOutputStream(os);
@@ -169,7 +176,12 @@ public class SSLChannel {
 			if (len <= 0)
 				break;
 			
-			data = decrypt(keyPair.getPrivate(), encrypted);
+			try {
+				data = decrypt(keyPair.getPrivate(), encrypted);
+			} catch (NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException
+					| NoSuchAlgorithmException | InvalidKeyException e) {
+				throw new SeriousError(e);
+			}
 			aos.write(data);
 		}
 		

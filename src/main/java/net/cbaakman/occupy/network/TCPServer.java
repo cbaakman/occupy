@@ -6,13 +6,17 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 import net.cbaakman.occupy.WhileThread;
+import net.cbaakman.occupy.errors.CommunicationError;
+import net.cbaakman.occupy.errors.ErrorQueue;
 
 public abstract class TCPServer {
 
-	ServerSocketChannel tcpChannel;
-	WhileThread listenThread;
-
-	public TCPServer(int listenPort) throws IOException {
+	private ServerSocketChannel tcpChannel;
+	private WhileThread listenThread;
+	private ErrorQueue errorQueue;
+	
+	public TCPServer(ErrorQueue errorQueue, int listenPort) throws IOException {
+		this.errorQueue = errorQueue;
 		
 		tcpChannel = ServerSocketChannel.open();
 		tcpChannel.bind(new InetSocketAddress(listenPort));
@@ -33,17 +37,15 @@ public abstract class TCPServer {
 						
 						onConnection(address, connectionChannel);
 					}
-				} catch (IOException e) {
-					onConnectionError(e);
+				} catch(IOException | CommunicationError e) {
+					errorQueue.pushError(e);
 				}
 			}
 		};
 		listenThread.start();
 	}
 
-	protected abstract void onConnectionError(Exception e);
-
-	protected abstract void onConnection(Address address, SocketChannel connectionChannel);
+	protected abstract void onConnection(Address address, SocketChannel connectionChannel) throws CommunicationError;
 
 	public void disconnect() throws IOException, InterruptedException {
 

@@ -1,7 +1,6 @@
 package net.cbaakman.occupy.config;
 
 import lombok.Data;
-import net.cbaakman.occupy.network.Address;
 
 @Data
 public class ServerConfig {

@@ -4,28 +4,24 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
-import net.cbaakman.occupy.authenticate.Credentials;
 import net.cbaakman.occupy.communicate.Client;
 import net.cbaakman.occupy.communicate.Connection;
 import net.cbaakman.occupy.communicate.Packet;
 import net.cbaakman.occupy.config.ClientConfig;
-import net.cbaakman.occupy.errors.AuthenticationError;
 import net.cbaakman.occupy.errors.CommunicationError;
-import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.errors.SeriousError;
 
 public class NetworkClient extends Client {
 	
 	private UDPMessenger udpMessenger;
-	private boolean running;
 	
-	public NetworkClient(ErrorHandler errorHandler, ClientConfig config) {
-		super(errorHandler, config);
+	public NetworkClient(ClientConfig config) {
+		super(config);
 	}
 	
 	private void initUDP() throws IOException {
-		udpMessenger = new UDPMessenger() {
+		udpMessenger = new UDPMessenger(getErrorQueue()) {
 			@Override
 			void onReceive(Address address, Packet message) {
 				if (!address.getAddress().equals(config.getServerAddress()))
@@ -33,52 +29,35 @@ public class NetworkClient extends Client {
 
 				NetworkClient.this.onPacket(message);
 			}
-
-			@Override
-			void onReceiveError(Exception e) {
-				onCommunicationError(new CommunicationError(e));
-			}
 		};
 	}
 	
 	private void closeUDP() throws IOException, InterruptedException {
 		udpMessenger.disconnect();
 	}
-
-	public void run() throws InitError {
+	
+	@Override
+	protected void initCommunication() throws InitError {
 		try {
 			initUDP();
 		} catch (IOException e) {
 			throw new InitError(e);
 		}
-		
-		onInit();
-		
-		long ticks0 = System.currentTimeMillis(),
-			 ticks;
-		float dt;
-		running = true;
-		
-		while (running) {
-			ticks = System.currentTimeMillis();
-			dt = (float)(ticks - ticks0) / 1000;
-
-			update(dt);
-		}
-		onShutdown();
-		
+	}
+	
+	@Override
+	protected void shutdownCommunication() {
 		try {
 			closeUDP();
 		} catch (IOException | InterruptedException e) {
-			// Should not happen!
-			SeriousErrorHandler.handle(e);
+			throw new SeriousError(e);
 		}
 	}
 
 	@Override
-	public Connection connectToServer() throws CommunicationError {
+	public Connection connectToServer() throws CommunicationError, SeriousError {
 		if (udpMessenger == null)
-			SeriousErrorHandler.handle(new RuntimeException("client is not running"));
+			throw new SeriousError("client is not running");
 		
 		Socket socket = new Socket();
 		try {
@@ -111,16 +90,11 @@ public class NetworkClient extends Client {
 	}
 
 	@Override
-	public void sendPacket(Packet packet) {
+	public void sendPacket(Packet packet) throws CommunicationError {
 		try {
 			udpMessenger.send(config.getServerAddress(), packet);
 		} catch (IOException e) {
-			onCommunicationError(new CommunicationError(e));
+			throw new CommunicationError(e);
 		}
-	}
-
-	@Override
-	public void stop() {
-		running = false;
 	}
 }

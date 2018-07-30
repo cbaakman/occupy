@@ -13,8 +13,7 @@ import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.math.FloatUtil;
 
 import lombok.Data;
-import net.cbaakman.occupy.error.GL3Error;
-import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.errors.GL3Error;
 
 @Data
 public class VertexBuffer<T extends Vertex> {
@@ -38,40 +37,30 @@ public class VertexBuffer<T extends Vertex> {
 		int [] handles = new int[1]; 
 		gl3.glGenBuffers(1, handles, 0);
 		vbo.glHandle = handles[0];
-		
-		int error = gl3.glGetError();
-		if (error != GL3.GL_NO_ERROR)
-			throw new GL3Error(error);
+
+		GL3Error.check(gl3);
 		
 		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, vbo.glHandle);
-		
-		error = gl3.glGetError();
-		if (error != GL3.GL_NO_ERROR)
-			throw new GL3Error(error);
+
+		GL3Error.check(gl3);
 		
 		gl3.glBufferData(GL3.GL_ARRAY_BUFFER,
 						 Vertex.getFloatCount(vertexClass) * vertexCount * Buffers.SIZEOF_FLOAT,
 						 null, glUsage);
-		
-		error = gl3.glGetError();
-		if (error != GL3.GL_NO_ERROR)
-			throw new GL3Error(error);
+
+		GL3Error.check(gl3);
 		
 		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, 0);
-		
-		error = gl3.glGetError();
-		if (error != GL3.GL_NO_ERROR)
-			throw new GL3Error(error);
+
+		GL3Error.check(gl3);
 		
 		return vbo;
 	}
 	
 	public void cleanup(GL3 gl3) throws GL3Error {
 		gl3.glDeleteBuffers(1, new int[]{glHandle}, 0);
-		
-		int error = gl3.glGetError();
-		if (error != GL3.GL_NO_ERROR)
-			throw new GL3Error(error);
+
+		GL3Error.check(gl3);
 	}
 	
 	public void update(GL3 gl3, T[] vertices, long offset)
@@ -89,33 +78,24 @@ public class VertexBuffer<T extends Vertex> {
 		
 		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, glHandle);
 		
-		int error = gl3.glGetError();
-		if (error != GL3.GL_NO_ERROR)
-			throw new GL3Error(error);
-		
+		GL3Error.check(gl3);
 		
 		gl3.glBufferSubData(GL3.GL_ARRAY_BUFFER,
 							offset * Vertex.getFloatCount(vertexClass) * Buffers.SIZEOF_FLOAT,
 							floatBuffer.capacity() * Buffers.SIZEOF_FLOAT, floatBuffer);
 
-		error = gl3.glGetError();
-		if (error != GL3.GL_NO_ERROR)
-			throw new GL3Error(error);
+		GL3Error.check(gl3);
 		
 		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, 0);
-		
-		error = gl3.glGetError();
-		if (error != GL3.GL_NO_ERROR)
-			throw new GL3Error(error);
+
+		GL3Error.check(gl3);
 	}
 	
 	public void draw(GL3 gl3, int mode) throws GL3Error {
 		
 		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, glHandle);
-		
-        int error = gl3.glGetError();
-        if (error != GL3.GL_NO_ERROR)
-			throw new GL3Error(error);
+
+		GL3Error.check(gl3);
         
         int stride = Vertex.getFloatCount(vertexClass) * Buffers.SIZEOF_FLOAT,
         	offset = 0;        
@@ -124,40 +104,30 @@ public class VertexBuffer<T extends Vertex> {
 		for (Vertex.Attrib attrib : Vertex.orderAttribsByIndex(vertexClass)) {
 			
 			gl3.glEnableVertexAttribArray(attrib.getIndex());
-			
-	        error = gl3.glGetError();
-	        if (error != GL3.GL_NO_ERROR)
-				throw new GL3Error(error);
+
+			GL3Error.check(gl3);
 	        
 	        gl3.glVertexAttribPointer(attrib.getIndex(), attrib.getFloatCount(),
 	        						  GL3.GL_FLOAT, false, stride, offset);
-	        
-	        error = gl3.glGetError();
-	        if (error != GL3.GL_NO_ERROR)
-				throw new GL3Error(error);
+
+			GL3Error.check(gl3);
 	        
 	        offset += attrib.getFloatCount() * Buffers.SIZEOF_FLOAT;
 		}
         
         gl3.glDrawArrays(mode, 0, vertexCount);
-        
-        error = gl3.glGetError();
-        if (error != GL3.GL_NO_ERROR)
-			throw new GL3Error(error);
+
+		GL3Error.check(gl3);
 
         for (Vertex.Attrib attrib : Vertex.orderAttribsByIndex(vertexClass)) {
 			
 			gl3.glDisableVertexAttribArray(attrib.getIndex());
-			
-	        error = gl3.glGetError();
-	        if (error != GL3.GL_NO_ERROR)
-				throw new GL3Error(error);
+
+			GL3Error.check(gl3);
         }
         
 		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, 0);
-		
-        error = gl3.glGetError();
-        if (error != GL3.GL_NO_ERROR)
-			throw new GL3Error(error);
+
+		GL3Error.check(gl3);
 	}
 }

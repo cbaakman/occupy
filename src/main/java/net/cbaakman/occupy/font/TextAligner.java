@@ -1,19 +1,16 @@
 package net.cbaakman.occupy.font;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import net.cbaakman.occupy.errors.TextAlignError;
-import net.cbaakman.occupy.font.enums.HorizontalTextAlignment;
-import net.cbaakman.occupy.font.enums.VerticalTextAlignment;
 
 public class TextAligner {
 	
 	public static TextAlignment getAlignment(Font font, String text, float maxLineWidth) throws TextAlignError {
-		TextAlignment alignment = new TextAlignment(font, maxLineWidth);
+		TextAlignment alignment = new TextAlignment(maxLineWidth);
 		
 		for (String forcedLineString : patternNewline.split(text)) {
 			alignment.getLines().addAll(getLines(font, forcedLineString, maxLineWidth));

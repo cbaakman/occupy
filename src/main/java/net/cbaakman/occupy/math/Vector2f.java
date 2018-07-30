@@ -1,9 +1,5 @@
 package net.cbaakman.occupy.math;
 
-import java.nio.FloatBuffer;
-
-import com.jogamp.common.nio.Buffers;
-
 import lombok.Data;
 
 @Data

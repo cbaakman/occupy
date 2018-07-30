@@ -5,26 +5,20 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.DatagramChannel;
-import java.util.UUID;
-
-import javax.annotation.PreDestroy;
 
 import net.cbaakman.occupy.WhileThread;
 import net.cbaakman.occupy.communicate.Packet;
 import net.cbaakman.occupy.errors.CommunicationError;
+import net.cbaakman.occupy.errors.ErrorQueue;
 
 public abstract class UDPMessenger {
 
+	private ErrorQueue errorQueue;
 	private DatagramChannel channel;
+	
 	private WhileThread listenerThread = new WhileThread("udp-listen") {
 		public void repeat() {
 			ByteBuffer buf = ByteBuffer.allocate(2048);
@@ -42,19 +36,25 @@ public abstract class UDPMessenger {
 					message = (Packet)ois.readObject();
 					UDPMessenger.this.onReceive(new Address(address.getAddress(), address.getPort()), message);
 				}
-			} catch (ClassNotFoundException | IOException e) {
-				UDPMessenger.this.onReceiveError(e);
+			} catch (ClassNotFoundException e) {
+				errorQueue.pushError(e);
+			} catch (IOException e) {
+				errorQueue.pushError(new CommunicationError(e));
 			}
 		}
 	};
 	
-	public UDPMessenger() throws IOException {
+	public UDPMessenger(ErrorQueue errorQueue) throws IOException {
+		this.errorQueue = errorQueue;
+		
 		channel = DatagramChannel.open();
 		channel.configureBlocking(false);
 		listenerThread.start();
 	}
 	
-	public UDPMessenger(int listenPort) throws IOException {
+	public UDPMessenger(ErrorQueue errorQueue, int listenPort) throws IOException {
+		this.errorQueue = errorQueue;
+		
 		channel = DatagramChannel.open();
 		channel.configureBlocking(false);
 		channel.bind(new InetSocketAddress(listenPort));
@@ -62,7 +62,6 @@ public abstract class UDPMessenger {
 	}
 	
 	abstract void onReceive(Address address, Packet message);
-	abstract void onReceiveError(Exception e);
 	
 	int getPort() {
 		return channel.socket().getLocalPort();

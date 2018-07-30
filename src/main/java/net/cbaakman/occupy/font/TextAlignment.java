@@ -6,11 +6,9 @@ import java.util.List;
 public class TextAlignment {
 
 	private List<TextLine> lines = new ArrayList<TextLine>();
-	private Font font;
 	private float maxWidth;
 	
-	public TextAlignment(Font font, float maxWidth) {
-		this.font = font;
+	public TextAlignment(float maxWidth) {
 		this.maxWidth = maxWidth;
 	}
 	

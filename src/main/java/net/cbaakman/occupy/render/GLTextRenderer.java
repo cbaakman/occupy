@@ -23,11 +23,12 @@ import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
 
 import lombok.Data;
 import net.cbaakman.occupy.annotations.VertexAttrib;
-import net.cbaakman.occupy.error.GL3Error;
-import net.cbaakman.occupy.error.ShaderCompileError;
+import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.MissingGlyphError;
-import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.errors.RenderError;
+import net.cbaakman.occupy.errors.ShaderCompileError;
+import net.cbaakman.occupy.errors.ShaderLinkError;
 import net.cbaakman.occupy.font.Font;
 import net.cbaakman.occupy.font.Glyph;
 import net.cbaakman.occupy.font.TextAlignment;
@@ -85,23 +86,10 @@ public class GLTextRenderer {
 	
 	private Font font;
 	
-	public GLTextRenderer(GL3 gl3, Font font) {
+	public GLTextRenderer(GL3 gl3, Font font) throws ShaderCompileError, ShaderLinkError, GL3Error {
 		this.font = font;
-
-		int vertexShader = 0,
-			fragmentShader = 0;
-		try {			
-			vertexShader = Shader.compile(gl3, GL3.GL_VERTEX_SHADER, VERTEX_SHADER_SRC);
-			fragmentShader = Shader.compile(gl3, GL3.GL_FRAGMENT_SHADER, FRAGMENT_SHADER_SRC);
-			shaderProgram = Shader.createProgram(gl3, new int[] {vertexShader, fragmentShader});
-			
-		} catch (ShaderCompileError | InitError e) {
-			
-			gl3.glDeleteShader(vertexShader);
-			gl3.glDeleteShader(fragmentShader);
-			
-			SeriousErrorHandler.handle(e);
-		}
+		
+		shaderProgram = Shader.createProgram(gl3, VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
 		
 		for (Entry<Character, Glyph> entry : font.getGlyphs().entrySet()) {
 			
@@ -111,22 +99,14 @@ public class GLTextRenderer {
 			glyphEntries.put(entry.getKey(), glyphEntry);
 		}
 		
-		try {
-			vbo = VertexBuffer.create(gl3, GlyphVertex.class, 4, GL3.GL_DYNAMIC_DRAW);
-		} catch (GL3Error e) {
-			SeriousErrorHandler.handle(e);
-		}
+		vbo = VertexBuffer.create(gl3, GlyphVertex.class, 4, GL3.GL_DYNAMIC_DRAW);
 	}
 	
-	public void cleanupGL(GL3 gl3) {
+	public void cleanupGL(GL3 gl3) throws GL3Error {
 		
-		try {
-			vbo.cleanup(gl3);
-		} catch (GL3Error e) {
-			SeriousErrorHandler.handle(e);
-		}
+		vbo.cleanup(gl3);
 
-		gl3.glDeleteProgram(shaderProgram);
+		Shader.deleteProgram(gl3, shaderProgram);
 		
 		for (GLGlyphEntry glyphEntry : glyphEntries.values()) {
 			if (glyphEntry.getGlTexture() != null)
@@ -157,11 +137,9 @@ public class GLTextRenderer {
 		
 		return texture;
 	}
-	private static void destroyGlyphTexture(GL3 gl3, int glTextureId) {
-		gl3.glDeleteTextures(1, new int[] {glTextureId}, 0);
-	}
 
-	public void renderGlyph(GL3 gl3, float[] projectionMatrix, char c) throws MissingGlyphError {
+	public void renderGlyph(GL3 gl3, float[] projectionMatrix, char c)
+			throws MissingGlyphError, GL3Error {
 		
 		Glyph glyph = font.getGlyph(c);
 		if (glyph == null)
@@ -185,29 +163,32 @@ public class GLTextRenderer {
 		FloatUtil.makeTranslation(glyphMatrix, true, -x, -y, 0.0f);
 		
 		gl3.glUseProgram(shaderProgram);
-		int error = gl3.glGetError();
-        if (error != GL3.GL_NO_ERROR)
-			SeriousErrorHandler.handle(new GL3Error(error));
+		GL3Error.check(gl3);
 		
 		int projectionMatrixLocation = gl3.glGetUniformLocation(shaderProgram, "projectionMatrix");
 		if (projectionMatrixLocation == -1)
-			SeriousErrorHandler.handle(new GL3Error(gl3.glGetError()));		
+			GL3Error.throwMe(gl3);	
 		
 		float[] resultMatrix = new float[16];
 		FloatUtil.multMatrix(projectionMatrix, glyphMatrix, resultMatrix);
 		gl3.glUniformMatrix4fv(projectionMatrixLocation, 1, false, FloatBuffer.wrap(resultMatrix));
-		error = gl3.glGetError();
-        if (error != GL3.GL_NO_ERROR)
-			SeriousErrorHandler.handle(new GL3Error(error));
+		GL3Error.check(gl3);
 		
         gl3.glActiveTexture(GL3.GL_TEXTURE0);
+		GL3Error.check(gl3);
+		
         glyphEntry.getGlTexture().enable(gl3);
+		GL3Error.check(gl3);
+		
         glyphEntry.getGlTexture().bind(gl3);
+		GL3Error.check(gl3);
         
         int textureLocation = gl3.glGetUniformLocation(shaderProgram, "glyphTexture");
         if (textureLocation == -1)
-        	SeriousErrorHandler.handle(new GL3Error(gl3.glGetError()));
+        	GL3Error.throwMe(gl3);
+        
         gl3.glUniform1i(textureLocation, 0);
+		GL3Error.check(gl3);
         
         GlyphVertex[] vertices = new GlyphVertex[] {
         	new GlyphVertex(x, y + glyph.getImage().getHeight(), 0.0f, th),
@@ -217,26 +198,22 @@ public class GLTextRenderer {
         };
         
         gl3.glBindAttribLocation(shaderProgram, POSITION_VERTEX_INDEX, "position");
-        error = gl3.glGetError();
-        if (error != GL3.GL_NO_ERROR)
-			SeriousErrorHandler.handle(new GL3Error(error));
+		GL3Error.check(gl3);
 
         gl3.glBindAttribLocation(shaderProgram, TEXCOORD_VERTEX_INDEX, "texCoord");
-        error = gl3.glGetError();
-        if (error != GL3.GL_NO_ERROR)
-			SeriousErrorHandler.handle(new GL3Error(error));
+		GL3Error.check(gl3);
         
-        try {
-			vbo.update(gl3, vertices, 0);
-			vbo.draw(gl3, GL3.GL_TRIANGLE_STRIP);
-		} catch (IndexOutOfBoundsException | GL3Error e) {
-			SeriousErrorHandler.handle(e);
-		}
+		vbo.update(gl3, vertices, 0);
+		vbo.draw(gl3, GL3.GL_TRIANGLE_STRIP);
         
         glyphEntry.getGlTexture().disable(gl3);
-        gl3.glUseProgram(0);
+       
+        gl3.glUseProgram(0);  
+		GL3Error.check(gl3);
 	}
-	public void renderTextLeftAlign(GL3 gl3, float[] projectionMatrix, String text) throws MissingGlyphError {
+	
+	public void renderTextLeftAlign(GL3 gl3, float[] projectionMatrix, String text)
+			throws MissingGlyphError, GL3Error {
 		float x = 0.0f;
 		int i = 0;
 		for (i = 0; i < text.length(); i++) {
@@ -258,7 +235,7 @@ public class GLTextRenderer {
 	
 	public void RenderAlignedText(GL3 gl3, float[] projectionMatrix, TextAlignment alignment,
 								  HorizontalTextAlignment ha, VerticalTextAlignment va)
-								throws MissingGlyphError {
+								throws MissingGlyphError, GL3Error {
 		
 		float[] vTtranslation = new float[16];
 		if (va.equals(VerticalTextAlignment.TOP))

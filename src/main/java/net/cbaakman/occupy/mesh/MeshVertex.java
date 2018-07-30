@@ -1,7 +1,5 @@
 package net.cbaakman.occupy.mesh;
 
-import java.util.Vector;
-
 import lombok.Data;
 import net.cbaakman.occupy.math.Vector3f;
 

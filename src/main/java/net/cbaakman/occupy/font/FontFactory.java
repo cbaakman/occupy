@@ -26,7 +26,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import lombok.Data;
-import net.cbaakman.occupy.errors.ParseError;
+import net.cbaakman.occupy.errors.FormatError;
 import net.cbaakman.occupy.image.BufferedImageTranscoder;
 
 public class FontFactory {
@@ -65,7 +65,7 @@ public class FontFactory {
 
 	public static FontFactory parse(InputStream is) throws IOException,
 													ParserConfigurationException,
-													SAXException, ParseError,
+													SAXException, FormatError,
 													NumberFormatException {
 		
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -75,16 +75,16 @@ public class FontFactory {
 		
 		Element svg = document.getDocumentElement();
 		if (!svg.getTagName().equalsIgnoreCase("svg"))
-			throw new ParseError("root element must be svg");
+			throw new FormatError("root element must be svg");
 		
 		Element defs = findDirectChildElement(svg, "defs");
 		if (defs == null)
-			throw new ParseError("svg element must contain a defs element");
+			throw new FormatError("svg element must contain a defs element");
 		
 		// Pick the 1st font tag in the defs:
 		Element font = findDirectChildElement(defs, "font");
 		if (font == null)
-			throw new ParseError("defs element must contain at least one font element");
+			throw new FormatError("defs element must contain at least one font element");
 
 		FontFactory fontFactory = new FontFactory();
 		
@@ -99,7 +99,7 @@ public class FontFactory {
 
 		Element fontFace = findDirectChildElement(font, "font-face");
 		if (fontFace == null)
-			throw new ParseError("font element must contain a font-face element");
+			throw new FormatError("font element must contain a font-face element");
 		parseFontFace(fontFace, fontFactory);
 		
 		NodeList nodeList = font.getChildNodes();
@@ -128,14 +128,14 @@ public class FontFactory {
 		return fontFactory;
 	}
 	
-	private static void parseHKern(Element hkernElement, FontFactory fontFactory) throws ParseError,
+	private static void parseHKern(Element hkernElement, FontFactory fontFactory) throws FormatError,
 																						 UnsupportedEncodingException {
 		if (!hkernElement.hasAttribute("k"))
-			throw new ParseError("k-attribute missing in hkern tag");
+			throw new FormatError("k-attribute missing in hkern tag");
 		float k = Float.parseFloat(hkernElement.getAttribute("k"));
 		
 		if (!hkernElement.hasAttribute("g1") && !hkernElement.hasAttribute("u1"))
-			throw new ParseError("group 1 is missing in hkern tag");
+			throw new FormatError("group 1 is missing in hkern tag");
 		
 		List<Character> u1 = new ArrayList<Character>();
 		if (hkernElement.hasAttribute("u1"))
@@ -152,12 +152,12 @@ public class FontFactory {
 					}
 				}
 				if (unicodeId == 0)
-					throw new ParseError(String.format("hkern entry g1 refers to unknown glyph: %s", name));
+					throw new FormatError(String.format("hkern entry g1 refers to unknown glyph: %s", name));
 				u1.add(unicodeId);
 			}
 
 		if (!hkernElement.hasAttribute("g2") && !hkernElement.hasAttribute("u2"))
-			throw new ParseError("group 2 is missing in hkern tag");
+			throw new FormatError("group 2 is missing in hkern tag");
 
 		List<Character> u2 = new ArrayList<Character>();
 		if (hkernElement.hasAttribute("u2"))
@@ -174,7 +174,7 @@ public class FontFactory {
 					}
 				}
 				if (unicodeId == 0)
-					throw new ParseError(String.format("hkern entry g2 refers to unknown glyph: %s", name));
+					throw new FormatError(String.format("hkern entry g2 refers to unknown glyph: %s", name));
 				u2.add(unicodeId);
 			}
 		
@@ -190,7 +190,7 @@ public class FontFactory {
 		}
 	}
 
-	private static void parseGlyph(Element glyphElement, FontFactory fontFactory) throws ParseError,
+	private static void parseGlyph(Element glyphElement, FontFactory fontFactory) throws FormatError,
 																						 NumberFormatException,
 																						 UnsupportedEncodingException {
 		if (!glyphElement.hasAttribute("unicode"))
@@ -240,14 +240,14 @@ public class FontFactory {
 		}
 	}
 
-	private static void parseFontFace(Element fontFaceElement, FontFactory fontFactory) throws ParseError,
+	private static void parseFontFace(Element fontFaceElement, FontFactory fontFactory) throws FormatError,
 																							   NumberFormatException {
 		if (!fontFaceElement.hasAttribute("units-per-em"))
-			throw new ParseError("font-face is missing required attribute units-per-em");
+			throw new FormatError("font-face is missing required attribute units-per-em");
 		fontFactory.unitsPerEM = Integer.parseInt(fontFaceElement.getAttribute("units-per-em"));
 		
 		if (!fontFaceElement.hasAttribute("bbox"))
-			throw new ParseError("font-face is missing required attribute bbox");
+			throw new FormatError("font-face is missing required attribute bbox");
 		String[] bbs = fontFaceElement.getAttribute("bbox").split("\\s+");
 		fontFactory.boundingBox.setLeft(Float.parseFloat(bbs[0]));
 		fontFactory.boundingBox.setBottom(Float.parseFloat(bbs[1]));

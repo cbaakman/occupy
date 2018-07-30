@@ -1,6 +1,5 @@
 package net.cbaakman.occupy;
 
-import java.util.UUID;
 
 import lombok.AccessLevel;
 import lombok.Data;

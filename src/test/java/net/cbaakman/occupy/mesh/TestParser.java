@@ -9,14 +9,14 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.junit.Test;
 import org.xml.sax.SAXException;
 
-import net.cbaakman.occupy.errors.ParseError;
+import net.cbaakman.occupy.errors.FormatError;
 
 public class TestParser {
 
 	@Test
 	public void testParseXML() throws IOException,
 									  ParserConfigurationException,
-									  SAXException, ParseError {
+									  SAXException, FormatError {
 		MeshFactory meshFactory = MeshFactory.parse(TestParser.class.getResourceAsStream("/mesh/infantry.xml"));
 		
 		assertTrue(meshFactory.getVertices().size() > 0);

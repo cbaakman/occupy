@@ -7,7 +7,7 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
 import net.cbaakman.occupy.annotations.VertexAttrib;
-import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.math.Vector2f;
 import net.cbaakman.occupy.math.Vector3f;
 
@@ -45,13 +45,8 @@ public class Vertex {
 			return field.getType();
 		}
 		
-		public Object getValueFor(Vertex vertex) {
-			try {
-				return field.get(vertex);
-			} catch (IllegalArgumentException | IllegalAccessException e) {
-				SeriousErrorHandler.handle(e);
-				return null;
-			}
+		public Object getValueFor(Vertex vertex) throws IllegalArgumentException, IllegalAccessException {
+			return field.get(vertex);
 		}
 		
 		public int getFloatCount() {
@@ -79,9 +74,9 @@ public class Vertex {
 		FloatBuffer buffer = ByteBuffer.allocateDirect(Buffers.SIZEOF_FLOAT * vertices.size() * Vertex.getFloatCount(vertexClass))
 							 .order(ByteOrder.nativeOrder()).asFloatBuffer();
 		
-		try{
-			for (T vertex : vertices) {
-				for (Attrib attrib : orderAttribsByIndex(vertexClass)) {
+		for (T vertex : vertices) {
+			for (Attrib attrib : orderAttribsByIndex(vertexClass)) {
+				try {
 					if (attrib.getTypeClass().equals(Vector3f.class)) {
 						
 						Vector3f vec = (Vector3f)attrib.getValueFor(vertex);
@@ -95,9 +90,10 @@ public class Vertex {
 						buffer.put(vec.getX()).put(vec.getY());
 					}
 				}
+				catch (IllegalArgumentException | IllegalAccessException e) {
+					throw new SeriousError(e);
+				}
 			}
-		} catch (IllegalArgumentException e) {
-			SeriousErrorHandler.handle(e);
 		}
 		
 		buffer.rewind();
@@ -105,7 +101,8 @@ public class Vertex {
 		return buffer;
 	}
 	
-	public static <T extends Vertex> FloatBuffer wrapInBuffer(T[] vertices, Class<T> vertexClass) {
+	public static <T extends Vertex> FloatBuffer wrapInBuffer(T[] vertices, Class<T> vertexClass)
+			throws IllegalArgumentException, IllegalAccessException {
 		
 		return wrapInBuffer(Arrays.asList(vertices), vertexClass);
 	}

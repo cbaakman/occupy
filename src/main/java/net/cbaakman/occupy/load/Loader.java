@@ -2,19 +2,14 @@ package net.cbaakman.occupy.load;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.log4j.Logger;
 
 import lombok.Data;
-import net.cbaakman.occupy.font.FontFactory;
 
 public class Loader {
 	
@@ -22,10 +17,10 @@ public class Loader {
 	
 	@Data
 	private class LoadJobEntry {
-		public LoadJobEntry(LoadJob job) {
+		public LoadJobEntry(LoadJob<? extends Object> job) {
 			this.job = job;
 		}
-		private LoadJob job;
+		private LoadJob<? extends Object> job;
 		private Object result = null;
 		private Exception error = null;
 	}
@@ -79,7 +74,7 @@ public class Loader {
 					runJob(entry);
 				else
 					try {
-						Thread.currentThread().sleep(1000);
+						Thread.sleep(1000);
 					} catch (InterruptedException e) {
 						logger.error(e.getMessage(), e);
 					}
@@ -112,6 +107,12 @@ public class Loader {
 		synchronized(threads) {
 			for (LoaderThread t : threads)
 				t.start();
+		}
+	}
+	
+	public void interrupt() {
+		synchronized(jobs) {
+			jobs.clear();  // prevent the threads from picking up new jobs
 		}
 	}
 	
@@ -149,13 +150,14 @@ public class Loader {
 					if (entry.getError() != null)
 						throw new ExecutionException(entry.getError());
 					
-					Thread.currentThread().sleep(100);
+					Thread.sleep(100);
 				}
 				return (T)entry.getResult();
 			}
 
 			@Override
-			public T get(long n, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+			public T get(long n, TimeUnit unit)
+					throws InterruptedException, ExecutionException, TimeoutException {
 				
 				long t0 = System.currentTimeMillis();
 				
@@ -164,7 +166,7 @@ public class Loader {
 					if (entry.getError() != null)
 						throw new ExecutionException(entry.getError());
 					
-					Thread.currentThread().sleep(unit.toMillis(1));
+					Thread.sleep(unit.toMillis(1));
 				}
 				return (T)entry.getResult();
 			}

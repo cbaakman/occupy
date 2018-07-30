@@ -1,28 +1,22 @@
 package net.cbaakman.occupy.render;
 
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import com.jogamp.common.nio.Buffers;
-import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GL3;
-import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.math.FloatUtil;
 
 import net.cbaakman.occupy.annotations.VertexAttrib;
-import net.cbaakman.occupy.error.GL3Error;
-import net.cbaakman.occupy.error.ShaderCompileError;
-import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.errors.ErrorQueue;
+import net.cbaakman.occupy.errors.GL3Error;
+import net.cbaakman.occupy.errors.ShaderCompileError;
+import net.cbaakman.occupy.errors.ShaderLinkError;
 import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector2f;
 
@@ -31,15 +25,15 @@ public class LoadGLEventListener implements GLEventListener {
 	private static Logger logger = Logger.getLogger(LoadGLEventListener.class);
 
 	private Loader loader;
+	private Client client;
 	
 	private static float LOAD_BAR_WIDTH = 200.0f;
 	private static float LOAD_BAR_HEIGHT = 20.0f;
 	private static float LOAD_BAR_EDGE = 3.0f;
 	
-	private Vector2f[] frameVectors;
-	
-	public LoadGLEventListener(Loader loader) {
+	public LoadGLEventListener(Loader loader, Client client) {
 		this.loader = loader;
+		this.client = client;
 	}
 	
 	private static final String VERTEX_SHADER_SRC = "#version 150\n" +
@@ -58,8 +52,8 @@ public class LoadGLEventListener implements GLEventListener {
 		@VertexAttrib(index=VERTEX_INDEX)
 		private Vector2f position = new Vector2f();
 		
-		public LoadVertex(Vector2f position) {
-			this.position = position;
+		public LoadVertex(float x, float y) {
+			this.position = new Vector2f(x, y);
 		}
 		
 		public Vector2f getPosition() {
@@ -93,41 +87,28 @@ public class LoadGLEventListener implements GLEventListener {
 	public void init(GLAutoDrawable drawable) {
 		
 		GL3 gl3 = drawable.getGL().getGL3();
-		
-		List<LoadVertex> verticesFrame = new ArrayList<LoadVertex>();
-		verticesFrame.add(new LoadVertex(new Vector2f(rects[0][0], rects[0][1])));
-		verticesFrame.add(new LoadVertex(new Vector2f(rects[1][0], rects[1][1])));
-		verticesFrame.add(new LoadVertex(new Vector2f(rects[0][2], rects[0][1])));
-		verticesFrame.add(new LoadVertex(new Vector2f(rects[1][2], rects[1][1])));
-		verticesFrame.add(new LoadVertex(new Vector2f(rects[0][2], rects[0][3])));
-		verticesFrame.add(new LoadVertex(new Vector2f(rects[1][2], rects[1][3])));
-		verticesFrame.add(new LoadVertex(new Vector2f(rects[0][0], rects[0][3])));
-		verticesFrame.add(new LoadVertex(new Vector2f(rects[1][0], rects[1][3])));
-		verticesFrame.add(new LoadVertex(new Vector2f(rects[0][0], rects[0][1])));
-		verticesFrame.add(new LoadVertex(new Vector2f(rects[1][0], rects[1][1])));
 
 		try {
+			List<LoadVertex> verticesFrame = new ArrayList<LoadVertex>();
+			verticesFrame.add(new LoadVertex(rects[0][0], rects[0][1]));
+			verticesFrame.add(new LoadVertex(rects[1][0], rects[1][1]));
+			verticesFrame.add(new LoadVertex(rects[0][2], rects[0][1]));
+			verticesFrame.add(new LoadVertex(rects[1][2], rects[1][1]));
+			verticesFrame.add(new LoadVertex(rects[0][2], rects[0][3]));
+			verticesFrame.add(new LoadVertex(rects[1][2], rects[1][3]));
+			verticesFrame.add(new LoadVertex(rects[0][0], rects[0][3]));
+			verticesFrame.add(new LoadVertex(rects[1][0], rects[1][3]));
+			verticesFrame.add(new LoadVertex(rects[0][0], rects[0][1]));
+			verticesFrame.add(new LoadVertex(rects[1][0], rects[1][1]));
+
 			vboFrame = VertexBuffer.create(gl3, LoadVertex.class, verticesFrame.size(), GL3.GL_STATIC_DRAW);
 			vboFrame.update(gl3, verticesFrame, 0);
 			
-			vboBar = VertexBuffer.create(gl3, LoadVertex.class, 4, GL3.GL_DYNAMIC_DRAW);
-		} catch (GL3Error e) {
-			SeriousErrorHandler.handle(e);
-		}
-		
-		int vertexShader = 0,
-			fragmentShader = 0;
-		try {			
-			vertexShader = Shader.compile(gl3, GL3.GL_VERTEX_SHADER, VERTEX_SHADER_SRC);
-			fragmentShader = Shader.compile(gl3, GL3.GL_FRAGMENT_SHADER, FRAGMENT_SHADER_SRC);
-			shaderProgram = Shader.createProgram(gl3, new int[] {vertexShader, fragmentShader});
+			vboBar = VertexBuffer.create(gl3, LoadVertex.class, 4, GL3.GL_DYNAMIC_DRAW); 
 			
-		} catch (ShaderCompileError | InitError e) {
-			
-			gl3.glDeleteShader(vertexShader);
-			gl3.glDeleteShader(fragmentShader);
-			
-			SeriousErrorHandler.handle(e);
+			shaderProgram = Shader.createProgram(gl3, VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
+		} catch (ShaderCompileError | GL3Error | ShaderLinkError e) {
+			client.getErrorQueue().pushError(e);
 		}
 	}
 
@@ -136,17 +117,13 @@ public class LoadGLEventListener implements GLEventListener {
 		
 		GL3 gl3 = drawable.getGL().getGL3();
 		
-		gl3.glDeleteProgram(shaderProgram);
-	
-		int error = gl3.glGetError();
-        if (error != GL3.GL_NO_ERROR)
-			SeriousErrorHandler.handle(new GL3Error(error));
-		
 		try {
+			Shader.deleteProgram(gl3, shaderProgram);
+			
 			vboFrame.cleanup(gl3);
 			vboBar.cleanup(gl3);
 		} catch (GL3Error e) {
-			SeriousErrorHandler.handle(e);
+			client.getErrorQueue().pushError(e);
 		}
 	}
 
@@ -157,66 +134,65 @@ public class LoadGLEventListener implements GLEventListener {
 		
         int w = drawable.getSurfaceWidth(),
             h = drawable.getSurfaceHeight();
-		
-    	float[] projectionMatrix = new float[16];
-		FloatUtil.makeOrtho(projectionMatrix, 0, true, -(float)(w) / 2, (float)(w) / 2, -(float)(h) / 2, (float)(h) / 2, -1.0f, 1.0f);
-		
-		gl3.glUseProgram(shaderProgram);
-		int error = gl3.glGetError();
-        if (error != GL3.GL_NO_ERROR)
-			SeriousErrorHandler.handle(new GL3Error(error));
-		
-		int projectionMatrixLocation = gl3.glGetUniformLocation(shaderProgram, "projectionMatrix");
-		if (projectionMatrixLocation == -1)
-			SeriousErrorHandler.handle(new GL3Error(gl3.glGetError()));
-		
-		gl3.glUniformMatrix4fv(projectionMatrixLocation, 1, false, FloatBuffer.wrap(projectionMatrix));
-		error = gl3.glGetError();
-        if (error != GL3.GL_NO_ERROR)
-			SeriousErrorHandler.handle(new GL3Error(error));
-		
-        gl3.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        gl3.glClear(GL3.GL_COLOR_BUFFER_BIT);
-		
-		
-		int loadDone = loader.getJobsDone(),
-			loadTotal = loadDone + loader.countJobsLeft();
-        float fractionLoaded = 0.0f;
-        if (loadTotal > 0)
-            fractionLoaded = ((float)loadDone) / loadTotal;
-        
-        gl3.glDisable(GL3.GL_CULL_FACE);
-        gl3.glDisable(GL3.GL_DEPTH_TEST);
-        
-        gl3.glBindAttribLocation(shaderProgram, VERTEX_INDEX, "position");
-        error = gl3.glGetError();
-        if (error != GL3.GL_NO_ERROR)
-			SeriousErrorHandler.handle(new GL3Error(error));
-        
 
-	    float x1, x2;
-        x1 = rects[2][0];
-        x2 = x1 + fractionLoaded * (rects[2][2] - rects[2][0]);
-        
-        LoadVertex[] barVertices = new LoadVertex[] {
-        	new LoadVertex(new Vector2f(x1, rects[2][1])),
-        	new LoadVertex(new Vector2f(x1, rects[2][3])),
-        	new LoadVertex(new Vector2f(x2, rects[2][1])),
-        	new LoadVertex(new Vector2f(x2, rects[2][3]))
-        };        
-        
         try {
-    	    vboFrame.draw(gl3, GL3.GL_TRIANGLE_STRIP);
-    	    
-    	    vboBar.update(gl3,  barVertices, 0);
-    	    vboBar.draw(gl3, GL3.GL_TRIANGLE_STRIP);
-	    } catch (GL3Error e) {
-			SeriousErrorHandler.handle(new GL3Error(error));
-	    }
+		
+	    	float[] projectionMatrix = new float[16];
+			FloatUtil.makeOrtho(projectionMatrix, 0, true, -(float)(w) / 2, (float)(w) / 2, -(float)(h) / 2, (float)(h) / 2, -1.0f, 1.0f);
+			
+			gl3.glUseProgram(shaderProgram);
+			GL3Error.check(gl3);
+			
+			int projectionMatrixLocation = gl3.glGetUniformLocation(shaderProgram, "projectionMatrix");
+			if (projectionMatrixLocation == -1)
+				GL3Error.throwMe(gl3);
+			
+			gl3.glUniformMatrix4fv(projectionMatrixLocation, 1, false, FloatBuffer.wrap(projectionMatrix));
+			GL3Error.check(gl3);
+			
+	        gl3.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	        GL3Error.check(gl3);
+	        
+	        gl3.glClear(GL3.GL_COLOR_BUFFER_BIT);
+	        GL3Error.check(gl3);		
+			
+			int loadDone = loader.getJobsDone(),
+				loadTotal = loadDone + loader.countJobsLeft();
+	        float fractionLoaded = 0.0f;
+	        if (loadTotal > 0)
+	            fractionLoaded = ((float)loadDone) / loadTotal;
+	        
+	        gl3.glDisable(GL3.GL_CULL_FACE);
+	        GL3Error.check(gl3);
+	        
+	        gl3.glDisable(GL3.GL_DEPTH_TEST);
+	        GL3Error.check(gl3);
+	        
+	        gl3.glBindAttribLocation(shaderProgram, VERTEX_INDEX, "position");
+	        GL3Error.check(gl3);        
+	
+		    float x1, x2;
+	        x1 = rects[2][0];
+	        x2 = x1 + fractionLoaded * (rects[2][2] - rects[2][0]);
+	        
+	        LoadVertex[] barVertices = new LoadVertex[] {
+	        	new LoadVertex(x1, rects[2][1]),
+	        	new LoadVertex(x1, rects[2][3]),
+	        	new LoadVertex(x2, rects[2][1]),
+	        	new LoadVertex(x2, rects[2][3])
+	        };        
+        
+		    vboFrame.draw(gl3, GL3.GL_TRIANGLE_STRIP);
+		    
+		    vboBar.update(gl3,  barVertices, 0);
+		    vboBar.draw(gl3, GL3.GL_TRIANGLE_STRIP);
+        }
+        catch (GL3Error e) {
+			client.getErrorQueue().pushError(e);
+        }
 	}
 
 	@Override
 	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
 	}
-
 }

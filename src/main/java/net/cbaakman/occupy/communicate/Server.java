@@ -30,15 +30,19 @@ import net.cbaakman.occupy.communicate.enums.ResponseType;
 import net.cbaakman.occupy.config.ServerConfig;
 import net.cbaakman.occupy.errors.AuthenticationError;
 import net.cbaakman.occupy.errors.CommunicationError;
-import net.cbaakman.occupy.errors.ErrorHandler;
+import net.cbaakman.occupy.errors.ErrorQueue;
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.errors.RenderError;
+import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.security.SSLChannel;
 import org.apache.log4j.Logger;
 
 public abstract class Server {
 	
 	final static Logger logger = Logger.getLogger(Server.class);
+	
+	private ErrorQueue errorQueue = new ErrorQueue();
+	private boolean running;
 	
 	@Data
 	private class ClientRecord {
@@ -56,17 +60,48 @@ public abstract class Server {
 	private Map<UUID, Updatable> updatables = new HashMap<UUID, Updatable>();
 	private Map<Identifier, ClientRecord> clientRecords = new HashMap<Identifier, ClientRecord>();
 	
-	protected ErrorHandler errorHandler;
 	protected ServerConfig config;
 	
-	public Server(ErrorHandler errorHandler, ServerConfig config) {
-		this.errorHandler = errorHandler;
+	public Server(ServerConfig config) {
 		this.config = config;
 	}
 
-	public abstract void run() throws InitError;
+
+	public void run() throws InitError {
+
+		initCommunication();
+		
+		long ticks0 = System.currentTimeMillis(),
+			 ticks;
+		float dt;
+		running = true;
+		
+		try {
+			while (running) {
+				ticks = System.currentTimeMillis();
+				dt = (float)(ticks - ticks0) / 1000;
+				
+				try {
+					update(dt);
+				} catch (CommunicationError e) {
+					logger.error(e.getMessage(), e);
+				}
+			}
+		} finally {  // always try to shut down tidily
+			shutdownCommunication();
+		}
+	}
 	
-	protected void onClientConnect(Identifier clientId, Connection connection) {
+	public void stop() {
+		running = false;
+	}
+	
+	protected abstract void shutdownCommunication();
+
+	protected abstract void initCommunication() throws InitError;
+
+	protected void onClientConnect(Identifier clientId, Connection connection)
+			throws CommunicationError {
 		
 		logger.debug("received a client connection");
 		
@@ -91,11 +126,10 @@ public abstract class Server {
 		} catch (ClassNotFoundException | InvalidKeyException | NoSuchPaddingException |
 				 IllegalBlockSizeException | BadPaddingException e) {
 			
-			// Not supposed to happen!
-			SeriousErrorHandler.handle(e);
+			throw new SeriousError(e);
 			
 		} catch (IOException e) {
-			onCommunicationError(new CommunicationError(e));
+			throw new CommunicationError(e);
 		}
 	}
 	
@@ -139,7 +173,7 @@ public abstract class Server {
 		}
 	}
 	
-	protected void onPacket(Identifier clientId, Packet packet) {
+	protected void onPacket(Identifier clientId, Packet packet) throws SeriousError {
 		
 		logger.debug("received a client packet");
 		
@@ -156,7 +190,7 @@ public abstract class Server {
 		}
 	}
 
-	protected void processUpdate(Identifier clientId, Update update) {
+	protected void processUpdate(Identifier clientId, Update update) throws SeriousError {
 		
 		Updatable updatable;
 		
@@ -181,14 +215,13 @@ public abstract class Server {
 			
 		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException |
 				IllegalAccessException e) {
-			// Must not happen!
-			SeriousErrorHandler.handle(e);
+			throw new SeriousError(e);
 		}
 	}
 	
-	protected abstract void sendPacket(Identifier clientId, Packet packet);
+	protected abstract void sendPacket(Identifier clientId, Packet packet) throws CommunicationError;
 	
-	protected void update(float dt) {
+	protected void update(float dt) throws CommunicationError {
 		
 		// timeout clients
 		synchronized (clientRecords) {
@@ -232,8 +265,7 @@ public abstract class Server {
 									sendPacket(clientRecord.getClientId(), new Packet(PacketType.UPDATE, update));
 									
 								} catch (IllegalArgumentException | IllegalAccessException e) {
-									// Must not happen!
-									SeriousErrorHandler.handle(e);
+									throw new SeriousError(e);
 								}
 							}
 						}
@@ -241,13 +273,16 @@ public abstract class Server {
 				}
 			}
 		}
+		
+		try {
+			errorQueue.throwAnyFirstEncounteredError();
+		} catch (RenderError | InitError e) {
+			// Server doesn't render or have separate init threads!
+			throw new SeriousError(e);
+		}
 	}
 	
-	public abstract void stop();
-	
-	protected void onCommunicationError(CommunicationError e) {
-		synchronized(e) {
-			errorHandler.handle(e);
-		}
+	public ErrorQueue getErrorQueue() {
+		return errorQueue;
 	}
 }

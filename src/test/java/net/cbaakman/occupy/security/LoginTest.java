@@ -2,9 +2,8 @@ package net.cbaakman.occupy.security;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.security.InvalidKeyException;
-import java.util.Properties;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import junit.framework.TestCase;
@@ -14,26 +13,17 @@ import net.cbaakman.occupy.communicate.Server;
 import net.cbaakman.occupy.config.ClientConfig;
 import net.cbaakman.occupy.config.ServerConfig;
 import net.cbaakman.occupy.errors.AuthenticationError;
-import net.cbaakman.occupy.errors.ErrorHandler;
-import net.cbaakman.occupy.errors.InitError;
+import net.cbaakman.occupy.errors.CommunicationError;
+import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.network.Address;
 import net.cbaakman.occupy.network.NetworkClient;
 import net.cbaakman.occupy.network.NetworkServer;
-import org.apache.log4j.PropertyConfigurator;
 
 public class LoginTest extends TestCase {
 
 	@Test
-	public void test() throws InterruptedException, AuthenticationError, IOException {
-		
-		final ErrorHandler errorHandler = new ErrorHandler() {
-	
-			@Override
-			public void handle(Exception e) {
-				e.printStackTrace();
-				System.exit(1);
-			}
-		};
+	public void test() throws InterruptedException, AuthenticationError,
+							  IOException, SeriousError, CommunicationError {
 
 		int serverPort = 5000;
 		ServerConfig serverConfig = new ServerConfig();
@@ -42,15 +32,20 @@ public class LoginTest extends TestCase {
 		ClientConfig clientConfig = new ClientConfig();
 		clientConfig.setServerAddress(new Address(InetAddress.getLoopbackAddress(), serverPort));
 		
-		final Server server = new NetworkServer(errorHandler, serverConfig);
-		final Client client = new NetworkClient(errorHandler, clientConfig);
+		final Server server = new NetworkServer(serverConfig);
+		final Client client = new NetworkClient(clientConfig);
 		
 		Thread serverThread = new Thread("server") {
 			public void run() {
 				try {
 					server.run();
-				} catch (InitError e) {
-					errorHandler.handle(e);
+				} catch (Exception e) {
+					
+					server.stop();
+					client.stop();
+					
+					e.printStackTrace();
+					Assert.fail();
 				}
 			}
 		};
@@ -60,14 +55,19 @@ public class LoginTest extends TestCase {
 			public void run() {
 				try {
 					client.run();
-				} catch (InitError e) {
-					errorHandler.handle(e);
+				} catch (Exception e) {
+					
+					server.stop();
+					client.stop();
+					
+					e.printStackTrace();
+					Assert.fail();
 				}
 			}
 		};
 		clientThread.start();
 		
-		Thread.currentThread().sleep(1000);
+		Thread.sleep(1000);
 		
 		client.login(new Credentials("hello", "world"));
 		

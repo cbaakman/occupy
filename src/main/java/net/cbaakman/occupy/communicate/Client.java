@@ -27,9 +27,6 @@ import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
 import java.security.InvalidKeyException;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import javax.imageio.ImageIO;
 
 import net.cbaakman.occupy.Updatable;
@@ -43,9 +40,10 @@ import net.cbaakman.occupy.communicate.enums.ResponseType;
 import net.cbaakman.occupy.config.ClientConfig;
 import net.cbaakman.occupy.errors.AuthenticationError;
 import net.cbaakman.occupy.errors.CommunicationError;
-import net.cbaakman.occupy.errors.ErrorHandler;
+import net.cbaakman.occupy.errors.ErrorQueue;
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.errors.RenderError;
+import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.font.Font;
 import net.cbaakman.occupy.font.FontFactory;
 import net.cbaakman.occupy.font.SVGStyle;
@@ -58,44 +56,40 @@ import net.cbaakman.occupy.security.SSLChannel;
 
 public abstract class Client {
 	
-	Logger logger = Logger.getLogger(Client.class);
+	static Logger logger = Logger.getLogger(Client.class);
 	
-	JFrame frame;
-	GLCanvas glCanvas;
-
+	private JFrame frame;
+	private GLCanvas glCanvas;
+	private ErrorQueue errorQueue = new ErrorQueue();
+	private boolean running;
+	
 	private Map<UUID, Updatable> updatables = new HashMap<UUID, Updatable>();
 	
-	protected ErrorHandler errorHandler;
 	protected ClientConfig config;
 	
-	public Client(ErrorHandler errorHandler, ClientConfig config) {
-		this.errorHandler = errorHandler;
+	public Client(ClientConfig config) {
 		this.config = config;
 	}
-
-	public abstract void run() throws InitError;
 	
-	public abstract void sendPacket(Packet packet);
+	public abstract void sendPacket(Packet packet) throws CommunicationError;
 	protected abstract Connection connectToServer() throws CommunicationError;
 
-	protected void onPacket(Packet message) {
+	protected void onPacket(Packet message) throws SeriousError {
+		
+		if (!connectedToServer())
+			return;
 		
 		if (message.getType().equals(PacketType.UPDATE)) {
 			processUpdateFromServer((Update)message.getData());
 		}
 		else if (message.getType().equals(PacketType.LOGOUT)) {
-			disconnect();
+			disconnectFromServer();
 		}
 	}
 	
-	public void login(Credentials credentials) throws AuthenticationError {
-		Connection connection;
-		try {
-			connection = connectToServer();
-		} catch (CommunicationError e) {
-			onCommunicationError(e);
-			return;
-		}
+	public void login(Credentials credentials)
+			throws AuthenticationError, CommunicationError {
+		Connection connection = connectToServer();
 		
 		try {
 			// Tell the server that we want to log in:
@@ -125,20 +119,18 @@ public abstract class Client {
 			else if (response.equals(ResponseType.AUTHENTICATION_ERROR))
 				throw new AuthenticationError();
 			
-		} catch (InvalidKeyException | IllegalBlockSizeException | BadPaddingException
-				| NoSuchPaddingException | ClassNotFoundException e) {
-			// Not supposed to happen!
-			SeriousErrorHandler.handle(e);
+		} catch (ClassNotFoundException e) {
+			throw new SeriousError(e);
 			
-		} catch (IOException e) {
-			onCommunicationError(new CommunicationError(e));
+		} catch (IOException | InvalidKeyException e) {
+			throw new CommunicationError(e);
 			
 		} finally {
 			// Always try to close the connection to the server.
 			try {
 				connection.close();
 			} catch (IOException e) {
-				onCommunicationError(new CommunicationError(e));
+				throw new CommunicationError(e);
 			}
 		}
 	}
@@ -158,8 +150,7 @@ public abstract class Client {
 					updatables.put(update.getObjectID(), updatable);
 				}
 			} catch (InstantiationException | IllegalAccessException e) {
-				// Must never happen!
-				SeriousErrorHandler.handle(e);
+				throw new SeriousError(e);
 			}
 		}
 		
@@ -174,8 +165,7 @@ public abstract class Client {
 			
 		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException |
 				IllegalAccessException e) {
-			// Must never happen!
-			SeriousErrorHandler.handle(e);
+			throw new SeriousError(e);
 		}
 	}
 	
@@ -190,7 +180,7 @@ public abstract class Client {
 		return glCanvas;
 	}
 
-	protected void onInit() throws InitError {
+	protected void initClient() throws InitError {
 		
 		Loader loader = new Loader(config.getLoadConcurrency());
 		
@@ -227,6 +217,12 @@ public abstract class Client {
 				return MeshFactory.parse(Client.class.getResourceAsStream("/mesh/infantry.xml"));
 			}
 		});
+
+		GLProfile profile = GLProfile.get(GLProfile.GL3);
+		GLCapabilities capabilities = new GLCapabilities(profile);
+	
+		glCanvas = new GLCanvas(capabilities);
+		
 		loader.whenDone(new Runnable() {
 			@Override
 			public void run() {
@@ -237,19 +233,15 @@ public abstract class Client {
 					glCanvas.addGLEventListener(new ClientGLEventListener(Client.this, fFont.get()));
 				} catch (InterruptedException | ExecutionException e) {
 
-					SeriousErrorHandler.handle(e);
+					getErrorQueue().pushError(e);
 				}
 			}
 		});
 		loader.start();
 
-		GLProfile profile = GLProfile.get(GLProfile.GL3);
-		GLCapabilities capabilities = new GLCapabilities(profile);
-	
-		glCanvas = new GLCanvas(capabilities);
 		glCanvas.setSize(config.getScreenWidth(), config.getScreenHeight());
 		
-		glCanvas.addGLEventListener(new LoadGLEventListener(loader));
+		glCanvas.addGLEventListener(new LoadGLEventListener(loader, this));
 		
 		logger.debug(String.format("screen width: %d, screen height: %d",
 								   glCanvas.getWidth(), glCanvas.getHeight()));
@@ -272,7 +264,7 @@ public abstract class Client {
         glCanvas.requestFocusInWindow();
 	}
 	
-	protected void update(float dt) {
+	protected void update(float dt) throws CommunicationError, RenderError, InitError {
 		synchronized (updatables) {
 			for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
 				entry.getValue().updateOnClient(dt);
@@ -298,7 +290,7 @@ public abstract class Client {
 							
 						} catch (IllegalArgumentException | IllegalAccessException e) {
 							// Must not happen!
-							SeriousErrorHandler.handle(e);
+							throw new SeriousError(e);
 						}
 					}
 				}
@@ -306,26 +298,73 @@ public abstract class Client {
 		}
 		
 		glCanvas.display();
+
+		errorQueue.throwAnyFirstEncounteredError();
+	}
+
+	public void run() throws InitError, RenderError {
+		
+		initCommunication();
+		initClient();
+		
+		long ticks0 = System.currentTimeMillis(),
+			 ticks;
+		float dt;
+		running = true;
+		
+		try {
+			while (running) {
+				ticks = System.currentTimeMillis();
+				dt = (float)(ticks - ticks0) / 1000;
+	
+				try {
+					update(dt);
+				} catch (CommunicationError e) {
+					disconnectFromServer();
+					
+					// TODO: show error screen
+				} catch (InitError | RenderError e) {
+					// TODO: show error screen
+				}
+			}
+		} finally {  // always try to shut down tidily
+			if (connectedToServer())
+				disconnectFromServer();
+			
+			shutdownClient();
+			shutdownCommunication();
+		}
 	}
 	
-	protected void onShutdown() {
-		
-		disconnect();
+	protected abstract void shutdownCommunication();
+
+	protected abstract void initCommunication() throws InitError;
+	
+	protected void shutdownClient() {
 		glCanvas.destroy();
 		frame.dispose();
 	}
 	
-	public abstract void stop();
+	public void stop() {
+		running = false;
+	}
 	
-	public void disconnect() {
-    	sendPacket(new Packet(PacketType.LOGOUT, null));
+	public boolean connectedToServer() {
+		// TODO
+		return false;
+	}
+	
+	public void disconnectFromServer() {
+    	try {
+			sendPacket(new Packet(PacketType.LOGOUT, null));
+		} catch (CommunicationError e) {
+			// Do nothing with this, since we're disconnecting anyway.
+		}
     	
     	updatables.clear();
 	}
-	
-	protected void onCommunicationError(CommunicationError e) {
-		synchronized(e) {
-			errorHandler.handle(e);
-		}
+
+	public ErrorQueue getErrorQueue() {
+		return errorQueue;
 	}
 }

@@ -20,7 +20,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import lombok.Data;
-import net.cbaakman.occupy.errors.ParseError;
+import net.cbaakman.occupy.errors.FormatError;
 import net.cbaakman.occupy.math.Quaternion4f;
 import net.cbaakman.occupy.math.Vector2f;
 import net.cbaakman.occupy.math.Vector3f;
@@ -41,7 +41,7 @@ public class MeshFactory {
 
 	public static MeshFactory parse(InputStream is)
 			throws ParserConfigurationException, SAXException,
-				   IOException, ParseError, NumberFormatException {
+				   IOException, FormatError, NumberFormatException {
 		
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder = factory.newDocumentBuilder();
@@ -50,14 +50,14 @@ public class MeshFactory {
 
 		Element meshElement = document.getDocumentElement();
 		if (!meshElement.getTagName().equalsIgnoreCase("mesh"))
-			throw new ParseError("root element must be mesh");
+			throw new FormatError("root element must be mesh");
 		
 		MeshFactory meshFactory = new MeshFactory();
 		
 		// Parse the vertices first:
 		Element vertices = findDirectChildElement(meshElement, "vertices");
 		if (vertices == null)
-			throw new ParseError("no vertices element found in mesh");
+			throw new FormatError("no vertices element found in mesh");
 		
 		for (Element vertexElement : iterElements(vertices, "vertex")) {
 			parseVertex(meshFactory, vertexElement);
@@ -66,7 +66,7 @@ public class MeshFactory {
 		// Parse the faces AFTER the vertices:
 		Element faces = findDirectChildElement(meshElement, "faces");
 		if (faces == null)
-			throw new ParseError("no faces element found in mesh");
+			throw new FormatError("no faces element found in mesh");
 
 		for (Element quadElement : iterElements(faces, "quad")) {
 			parseQuad(meshFactory, quadElement);
@@ -78,7 +78,7 @@ public class MeshFactory {
 		// Parse the subsets AFTER the faces:
 		Element subsets = findDirectChildElement(meshElement, "subsets");
 		if (subsets == null)
-			throw new ParseError("no subsets element found in mesh");
+			throw new FormatError("no subsets element found in mesh");
 
 		for (Element subsetElement : iterElements(subsets, "subset")) {
 			parseSubset(meshFactory, subsetElement);
@@ -89,7 +89,7 @@ public class MeshFactory {
 		if (armature != null) {
 			Element bones = findDirectChildElement(armature, "bones");
 			if (bones == null)
-				throw new ParseError("armature without bones");
+				throw new FormatError("armature without bones");
 			
 			parseBones(meshFactory, bones);
 			
@@ -106,14 +106,14 @@ public class MeshFactory {
 	}
 
 	private static void parseAnimation(MeshFactory meshFactory, Element animationElement)
-			throws ParseError, NumberFormatException {
+			throws FormatError, NumberFormatException {
 		if (!animationElement.hasAttribute("name"))
-			throw new ParseError("animation without name");
+			throw new FormatError("animation without name");
 		
 		String animationId = animationElement.getAttribute("name");
 		
 		if (!animationElement.hasAttribute("length"))
-			throw new ParseError("animation without length");
+			throw new FormatError("animation without length");
 		
 		MeshBoneAnimation animation = new MeshBoneAnimation();
 		animation.setLength(Integer.parseInt(animationElement.getAttribute("length")));
@@ -121,7 +121,7 @@ public class MeshFactory {
 		for (Element layerElement : iterElements(animationElement, "layer")) {
 			
 			if (!layerElement.hasAttribute("bone_id"))
-				throw new ParseError("bone_id");
+				throw new FormatError("bone_id");
 			String boneId = layerElement.getAttribute("bone_id");
 			MeshBone bone = meshFactory.getBones().get(boneId);
 			
@@ -131,7 +131,7 @@ public class MeshFactory {
 			for (Element keyElement : iterElements(layerElement, "key")) {
 				
 				if (!keyElement.hasAttribute("frame"))
-					throw new ParseError("key element without frame number");
+					throw new FormatError("key element without frame number");
 				int frame = Integer.parseInt(keyElement.getAttribute("frame"));
 				
 				MeshBoneAnimation.Key key = animation.new Key();
@@ -148,13 +148,13 @@ public class MeshFactory {
 	}
 
 	private static void parseBones(MeshFactory meshFactory, Element bonesElement)
-			throws ParseError, NumberFormatException {
+			throws FormatError, NumberFormatException {
 		
 		Map<MeshBone, String> parentLookup = new HashMap<MeshBone, String>();
 		for (Element boneElement : iterElements(bonesElement, "bone")) {
 			
 			if (!boneElement.hasAttribute("id"))
-				throw new ParseError("missing id on bone element");
+				throw new FormatError("missing id on bone element");
 			String boneId = boneElement.getAttribute("id");
 			
 			MeshBone bone = new MeshBone();
@@ -170,7 +170,7 @@ public class MeshFactory {
 			if (vertices != null) {
 				for (Element vertexElement : iterElements(vertices, "vertex")) {
 					if (!vertexElement.hasAttribute("id"))
-						throw new ParseError("bone vertex has no id");
+						throw new FormatError("bone vertex has no id");
 					
 					String vertexId = vertexElement.getAttribute("id");
 					bone.getVertices().add(meshFactory.getVertices().get(vertexId));
@@ -189,30 +189,30 @@ public class MeshFactory {
 		}
 	}
 
-	private static void parseSubset(MeshFactory meshFactory, Element subsetElement) throws ParseError {
+	private static void parseSubset(MeshFactory meshFactory, Element subsetElement) throws FormatError {
 		String subsetId;
 		if (subsetElement.hasAttribute("name"))
 			subsetId = subsetElement.getAttribute("name");
 		else if (subsetElement.hasAttribute("id"))
 			subsetId = subsetElement.getAttribute("id");
 		else
-			throw new ParseError("no id on subset");
+			throw new FormatError("no id on subset");
 		
 		Subset subset = meshFactory.new Subset();
 		
 		Element faces = findDirectChildElement(subsetElement, "faces");
 		if (faces == null)
-			throw new ParseError("no faces tag in subset");
+			throw new FormatError("no faces tag in subset");
 
 		for (Element quadElement : iterElements(faces, "quad")) {
 			if (!quadElement.hasAttribute("id"))
-				throw new ParseError("id missing in subset quad");
+				throw new FormatError("id missing in subset quad");
 			String faceId = quadElement.getAttribute("id");
 			subset.getFaces().add(meshFactory.getFaces().get(faceId));
 		}
 		for (Element triangleElement : iterElements(faces, "triangle")) {
 			if (!triangleElement.hasAttribute("id"))
-				throw new ParseError("id missing in subset triangle");
+				throw new FormatError("id missing in subset triangle");
 			String faceId = triangleElement.getAttribute("id");
 			subset.getFaces().add(meshFactory.getFaces().get(faceId));
 		}
@@ -221,9 +221,9 @@ public class MeshFactory {
 	}
 
 	private static void parseTriangle(MeshFactory meshFactory, Element triangleElement)
-			throws ParseError, NumberFormatException {
+			throws FormatError, NumberFormatException {
 		if (!triangleElement.hasAttribute("id"))
-			throw new ParseError("id missing on triangle");
+			throw new FormatError("id missing on triangle");
 		
 		String faceId = triangleElement.getAttribute("id");
 		
@@ -234,22 +234,22 @@ public class MeshFactory {
 			
 			if (countCorners < 3) {
 				if (!cornerElement.hasAttribute("tex_u"))
-					throw new ParseError("tex_u missing on corner");
+					throw new FormatError("tex_u missing on corner");
 				texels[countCorners][0] = Float.parseFloat(cornerElement.getAttribute("tex_u"));
 	
 				if (!cornerElement.hasAttribute("tex_v"))
-					throw new ParseError("tex_v missing on corner");
+					throw new FormatError("tex_v missing on corner");
 				texels[countCorners][1] = Float.parseFloat(cornerElement.getAttribute("tex_v"));
 				
 				if (!cornerElement.hasAttribute("vertex_id"))
-					throw new ParseError("vertex id missing on corner");
+					throw new FormatError("vertex id missing on corner");
 				vertex_ids[countCorners] = cornerElement.getAttribute("vertex_id");
 			}
 			
 			countCorners++;
 		}
 		if(countCorners != 3)
-			throw new ParseError(String.format("triangle element with %d corners", countCorners));
+			throw new FormatError(String.format("triangle element with %d corners", countCorners));
 		
 		MeshFace face = new MeshFace(meshFactory.getVertices().get(vertex_ids[0]),
 									 meshFactory.getVertices().get(vertex_ids[1]),
@@ -267,9 +267,9 @@ public class MeshFactory {
 
 
 private static void parseQuad(MeshFactory meshFactory, Element quadElement)
-			throws ParseError, NumberFormatException {
+			throws FormatError, NumberFormatException {
 		if (!quadElement.hasAttribute("id"))
-			throw new ParseError("id missing on quad");
+			throw new FormatError("id missing on quad");
 		
 		String faceId = quadElement.getAttribute("id");
 		
@@ -280,22 +280,22 @@ private static void parseQuad(MeshFactory meshFactory, Element quadElement)
 
 			if (countCorners < 4) {
 				if (!cornerElement.hasAttribute("tex_u"))
-					throw new ParseError("tex_u missing on corner");
+					throw new FormatError("tex_u missing on corner");
 				texels[countCorners][0] =Float.parseFloat(cornerElement.getAttribute("tex_u"));
 	
 				if (!cornerElement.hasAttribute("tex_v"))
-					throw new ParseError("tex_v missing on corner");
+					throw new FormatError("tex_v missing on corner");
 				texels[countCorners][1] = Float.parseFloat(cornerElement.getAttribute("tex_v"));
 				
 				if (!cornerElement.hasAttribute("vertex_id"))
-					throw new ParseError("vertex id missing on corner");
+					throw new FormatError("vertex id missing on corner");
 				vertex_ids[countCorners] = cornerElement.getAttribute("vertex_id");
 			}
 			
 			countCorners++;
 		}
 		if(countCorners != 4)
-			throw new ParseError(String.format("quad element with %d corners", countCorners));
+			throw new FormatError(String.format("quad element with %d corners", countCorners));
 		
 		MeshFace face = new MeshFace(meshFactory.getVertices().get(vertex_ids[0]),
 									 meshFactory.getVertices().get(vertex_ids[1]),
@@ -314,9 +314,9 @@ private static void parseQuad(MeshFactory meshFactory, Element quadElement)
 	}
 
 	private static void parseVertex(MeshFactory meshFactory, Element vertexElement)
-			throws ParseError, NumberFormatException {
+			throws FormatError, NumberFormatException {
 		if (!vertexElement.hasAttribute("id"))
-			throw new ParseError("id missing on vertex");
+			throw new FormatError("id missing on vertex");
 		
 		String vertexId = vertexElement.getAttribute("id");
 		
@@ -324,43 +324,43 @@ private static void parseQuad(MeshFactory meshFactory, Element quadElement)
 		
 		Element positionElement = findDirectChildElement(vertexElement, "pos");
 		if (positionElement == null)
-			throw new ParseError("no position in vertex");
+			throw new FormatError("no position in vertex");
 		
 		vertex.setPosition(parseVector3f(positionElement));
 		
 		Element normalElement = findDirectChildElement(vertexElement, "norm");
-		if (positionElement == null)
-			throw new ParseError("no position in vertex");
+		if (normalElement == null)
+			throw new FormatError("no position in vertex");
 		
 		vertex.setNormal(parseVector3f(normalElement));
 		
 		meshFactory.vertices.put(vertexId, vertex);
 	}
 
-	private static Vector3f parseVector3f(Element element) throws ParseError, NumberFormatException {
+	private static Vector3f parseVector3f(Element element) throws FormatError, NumberFormatException {
 
 		if (!element.hasAttribute("x") || !element.hasAttribute("y") || !element.hasAttribute("z"))
-			throw new ParseError(String.format("missing x, y or z on %s element", element.getTagName()));
+			throw new FormatError(String.format("missing x, y or z on %s element", element.getTagName()));
 		
 		return new Vector3f(Float.parseFloat(element.getAttribute("x")),
 							Float.parseFloat(element.getAttribute("y")),
 							Float.parseFloat(element.getAttribute("z")));
 	}
 
-	private static Vector3f parseTail(Element element) throws ParseError, NumberFormatException {
+	private static Vector3f parseTail(Element element) throws FormatError, NumberFormatException {
 		
 		if (!element.hasAttribute("tail_x") || !element.hasAttribute("tail_y") || !element.hasAttribute("tail_z"))
-			throw new ParseError(String.format("missing tail_x, tail_y or tail_z on %s element", element.getTagName()));
+			throw new FormatError(String.format("missing tail_x, tail_y or tail_z on %s element", element.getTagName()));
 		
 		return new Vector3f(Float.parseFloat(element.getAttribute("tail_x")),
 							Float.parseFloat(element.getAttribute("tail_y")),
 							Float.parseFloat(element.getAttribute("tail_z")));
 	}
-	private static Quaternion4f parseRotation(Element element) throws ParseError, NumberFormatException {
+	private static Quaternion4f parseRotation(Element element) throws FormatError, NumberFormatException {
 
 		if (!element.hasAttribute("rot_x") || !element.hasAttribute("rot_y") ||
 				!element.hasAttribute("rot_z") || !element.hasAttribute("rot_w"))
-			throw new ParseError(String.format("missing rot_x, rot_y, rot_z or rot_w on %s element", element.getTagName()));
+			throw new FormatError(String.format("missing rot_x, rot_y, rot_z or rot_w on %s element", element.getTagName()));
 		
 		return new Quaternion4f(Float.parseFloat(element.getAttribute("rot_x")),
 								Float.parseFloat(element.getAttribute("rot_y")),

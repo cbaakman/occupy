@@ -1,4 +1,4 @@
-package net.cbaakman.occupy.error;
+package net.cbaakman.occupy.errors;
 
 public class ShaderCompileError extends Exception {
 

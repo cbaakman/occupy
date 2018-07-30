@@ -3,43 +3,35 @@ package net.cbaakman.occupy.network;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import lombok.Data;
 import net.cbaakman.occupy.communicate.Identifier;
 import net.cbaakman.occupy.communicate.Packet;
 import net.cbaakman.occupy.communicate.Server;
 import net.cbaakman.occupy.config.ServerConfig;
 import net.cbaakman.occupy.errors.CommunicationError;
-import net.cbaakman.occupy.errors.ErrorHandler;
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.SeriousErrorHandler;
+import net.cbaakman.occupy.errors.SeriousError;
 
 public class NetworkServer extends Server {
 
-	private boolean running;
 	UDPMessenger udpMessenger;
 	TCPServer tcpServer;
 	
-	public NetworkServer(ErrorHandler errorHandler, ServerConfig config) {
-		super(errorHandler, config);
+	public NetworkServer(ServerConfig config) {
+		super(config);
 	}
 	
 	private void initTCP() throws IOException {
-		tcpServer = new TCPServer(config.getListenPort()) {
+		tcpServer = new TCPServer(getErrorQueue(),config.getListenPort()) {
 
 			@Override
-			protected void onConnectionError(Exception e) {
-				onCommunicationError(new CommunicationError(e));
-			}
-
-			@Override
-			protected void onConnection(Address address, SocketChannel connectionChannel) {
-				try{			
-					NetworkServer.this.onClientConnect(address, new SocketConnection(connectionChannel.socket()));
+			protected void onConnection(Address address, SocketChannel connectionChannel)
+					throws CommunicationError {
+				NetworkServer.this.onClientConnect(address, new SocketConnection(connectionChannel.socket()));
 					
+				try {
 					connectionChannel.close();
-					
 				} catch (IOException e) {
-					onCommunicationError(new CommunicationError(e));
+					getErrorQueue().pushError(e);
 				}
 			}
 		};
@@ -50,17 +42,12 @@ public class NetworkServer extends Server {
 	}
 	
 	private void initUDP() throws IOException {
-		udpMessenger = new UDPMessenger(config.getListenPort()) {
+		udpMessenger = new UDPMessenger(getErrorQueue(), config.getListenPort()) {
 
 			@Override
 			void onReceive(Address senderAddress, Packet message) {
 									
 				NetworkServer.this.onPacket(senderAddress, message);
-			}
-
-			@Override
-			void onReceiveError(Exception e) {
-				onCommunicationError(new CommunicationError(e));
 			}
 		};
 	}
@@ -68,52 +55,36 @@ public class NetworkServer extends Server {
 		udpMessenger.disconnect();
 	}
 
-	public void run() throws InitError {
-
+	@Override
+	protected void initCommunication() throws InitError {
 		try {
 			initTCP();
 			initUDP();
 		} catch (IOException e) {
 			throw new InitError(e);
 		}
-		
-		long ticks0 = System.currentTimeMillis(),
-			 ticks;
-		float dt;
-		running = true;
-		
-		while (running) {
-			ticks = System.currentTimeMillis();
-			dt = (float)(ticks - ticks0) / 1000;
-			
-			update(dt);
-		}
-		
+	}
+
+	@Override
+	protected void shutdownCommunication() {
 		try {
 			closeTCP();
 			closeUDP();
 		} catch (IOException | InterruptedException e) {
-			
-			// Should not happen!
-			SeriousErrorHandler.handle(e);
+			throw new SeriousError(e);
 		}
-	}
-	
-	@Override
-	public void stop() {
-		running = false;
 	}
 
 	@Override
-	protected void sendPacket(Identifier clientId, Packet packet) {
+	protected void sendPacket(Identifier clientId, Packet packet) throws CommunicationError {
 		if (clientId instanceof Address)
 			try {
 				udpMessenger.send((Address)clientId, packet);
 			} catch (IOException e) {
-				onCommunicationError(new CommunicationError(e));
+				throw new CommunicationError(e);
 			}
 		else
-			onCommunicationError(new CommunicationError(
-					String.format("cannot send to client with ID type %s", clientId.getClass().getName())));
+			throw new CommunicationError(
+					String.format("cannot send to client with ID type %s", clientId.getClass().getName()));
 	}
 }
