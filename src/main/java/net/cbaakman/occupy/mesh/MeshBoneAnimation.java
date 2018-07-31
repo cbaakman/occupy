@@ -5,15 +5,16 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import com.jogamp.opengl.math.Quaternion;
+
 import lombok.Data;
-import net.cbaakman.occupy.math.Quaternion4f;
 import net.cbaakman.occupy.math.Vector3f;
 
 @Data
 public class MeshBoneAnimation {
 	@Data
 	public class Key {
-		Quaternion4f rotation = new Quaternion4f();
+		Quaternion rotation = new Quaternion();
 		Vector3f location = new Vector3f();
 	}
 	@Data

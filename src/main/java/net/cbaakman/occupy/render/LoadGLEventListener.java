@@ -107,6 +107,10 @@ public class LoadGLEventListener implements GLEventListener {
 			vboBar = VertexBuffer.create(gl3, LoadVertex.class, 4, GL3.GL_DYNAMIC_DRAW); 
 			
 			shaderProgram = Shader.createProgram(gl3, VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
+	        
+	        gl3.glBindAttribLocation(shaderProgram, VERTEX_INDEX, "position");
+	        GL3Error.check(gl3);        
+	        
 		} catch (ShaderCompileError | GL3Error | ShaderLinkError e) {
 			client.getErrorQueue().pushError(e);
 		}
@@ -167,9 +171,6 @@ public class LoadGLEventListener implements GLEventListener {
 	        
 	        gl3.glDisable(GL3.GL_DEPTH_TEST);
 	        GL3Error.check(gl3);
-	        
-	        gl3.glBindAttribLocation(shaderProgram, VERTEX_INDEX, "position");
-	        GL3Error.check(gl3);        
 	
 		    float x1, x2;
 	        x1 = rects[2][0];

@@ -230,7 +230,10 @@ public abstract class Client {
 				glCanvas.removeGLEventListener(listener0);
 				
 				try {
-					glCanvas.addGLEventListener(new ClientGLEventListener(Client.this, fFont.get()));
+					glCanvas.addGLEventListener(new ClientGLEventListener(Client.this, 
+																		  fFont.get(),
+																		  fInfantryMeshFactory.get(),
+																		  fInfantryImage.get()));
 				} catch (InterruptedException | ExecutionException e) {
 
 					getErrorQueue().pushError(e);

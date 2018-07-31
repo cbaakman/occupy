@@ -16,6 +16,7 @@ import org.apache.log4j.Logger;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.math.FloatUtil;
+import com.jogamp.opengl.util.awt.ImageUtil;
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
@@ -90,6 +91,13 @@ public class GLTextRenderer {
 		this.font = font;
 		
 		shaderProgram = Shader.createProgram(gl3, VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
+        
+        gl3.glBindAttribLocation(shaderProgram, POSITION_VERTEX_INDEX, "position");
+		GL3Error.check(gl3);
+
+        gl3.glBindAttribLocation(shaderProgram, TEXCOORD_VERTEX_INDEX, "texCoord");
+		GL3Error.check(gl3);
+		
 		
 		for (Entry<Character, Glyph> entry : font.getGlyphs().entrySet()) {
 			
@@ -123,7 +131,12 @@ public class GLTextRenderer {
 		// Fill the texture
 		BufferedImage image = glyph.getImage();
 		
+		// In svg font the coordinates are upside down!
 		TextureData textureData = AWTTextureIO.newTextureData(gl3.getGLProfile(), image, false);
+		if (!textureData.getMustFlipVertically()) {
+			ImageUtil.flipImageVertically(image);
+			textureData = AWTTextureIO.newTextureData(gl3.getGLProfile(), image, false);
+		}
 
 		Texture texture = TextureIO.newTexture(gl3, textureData);
 
@@ -196,12 +209,6 @@ public class GLTextRenderer {
         	new GlyphVertex(x + glyph.getImage().getWidth(), y + glyph.getImage().getHeight(), tw, th),
         	new GlyphVertex(x + glyph.getImage().getWidth(), y, tw, 0.0f)
         };
-        
-        gl3.glBindAttribLocation(shaderProgram, POSITION_VERTEX_INDEX, "position");
-		GL3Error.check(gl3);
-
-        gl3.glBindAttribLocation(shaderProgram, TEXCOORD_VERTEX_INDEX, "texCoord");
-		GL3Error.check(gl3);
         
 		vbo.update(gl3, vertices, 0);
 		vbo.draw(gl3, GL3.GL_TRIANGLE_STRIP);

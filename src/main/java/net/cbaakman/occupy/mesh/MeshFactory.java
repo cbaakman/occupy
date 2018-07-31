@@ -12,6 +12,7 @@ import java.util.Map.Entry;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import org.apache.log4j.Logger;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -19,14 +20,19 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import com.jogamp.opengl.math.FloatUtil;
+import com.jogamp.opengl.math.Quaternion;
+
 import lombok.Data;
 import net.cbaakman.occupy.errors.FormatError;
-import net.cbaakman.occupy.math.Quaternion4f;
 import net.cbaakman.occupy.math.Vector2f;
 import net.cbaakman.occupy.math.Vector3f;
+import net.cbaakman.occupy.render.BoneTransformation;
 
 @Data
 public class MeshFactory {
+	
+	static Logger logger = Logger.getLogger(MeshFactory.class);
 	
 	@Data
 	public class Subset {
@@ -38,6 +44,105 @@ public class MeshFactory {
 	Map<String, MeshFace> faces = new HashMap<String, MeshFace>();
 	Map<String, Subset> subsets = new HashMap<String, Subset>();
 	Map<String, MeshBoneAnimation> animations = new HashMap<String, MeshBoneAnimation>();
+	
+	private Map<String, MeshVertex> getTransformedVertices(Map<String, BoneTransformation> transformationsMap) {
+		
+		// Initialize counters that are needed to calculate the average transformed vertices:
+		Map<String, Integer> transformationCountPerVertex = new HashMap<String, Integer>();
+		Map<String, MeshVertex> averageTransformedVertices = deepCopyVertices();
+		for (String vertexId : averageTransformedVertices.keySet()) {
+			transformationCountPerVertex.put(vertexId, 0);
+		}
+		
+		for (Entry<String, BoneTransformation> entry : transformationsMap.entrySet()) {
+			String boneId = entry.getKey();
+			
+			if (bones.containsKey(boneId)) {
+				
+				float[] mr = new float[16],
+						ms = new float[16],
+						mt = new float[16];
+				FloatUtil.makeIdentity(mt);
+				
+				// Get the total transformation, parents included.
+				MeshBone bone = bones.get(boneId);
+				while(bone != null) {
+					if (transformationsMap.containsKey(bone.getId())) {
+						transformationsMap.get(bone.getId()).toMatrix(ms);
+						FloatUtil.multMatrix(ms, mt, mr);
+						mt = mr.clone();
+					}
+					bone = bone.getParent();
+				}
+				
+				bone = bones.get(boneId);
+				for (MeshVertex boneVertex : bone.getVertices()) {
+					String vertexId = boneVertex.getId();
+					
+					MeshVertex transformed = getTransformed(boneVertex, mt);
+					
+					if (transformationCountPerVertex.get(vertexId) > 0) {
+
+						MeshVertex current = averageTransformedVertices.get(boneVertex.getId());
+						averageTransformedVertices.put(vertexId, sumOfVertices(transformed, current));
+					}
+					else
+						averageTransformedVertices.put(vertexId, transformed);
+				}
+			}
+		}
+		/* Calculate averages of transformed vertices,
+		 * in case some vertices have been modified by multiple bones. */
+		for (Entry<String, Integer> entry : transformationCountPerVertex.entrySet()) {
+			String vertexId = entry.getKey();
+			int transformCount = entry.getValue();
+			MeshVertex vertex = averageTransformedVertices.get(vertexId);
+			
+			if (transformCount > 0)
+				averageTransformedVertices.put(vertexId, getDividedBy(vertex, transformCount));
+		}
+		return averageTransformedVertices;
+	}
+
+	private static MeshVertex getDividedBy(MeshVertex v, float d) {
+		
+		MeshVertex r = v.copy();
+		r.setPosition(v.getPosition().divide(d));
+		r.setNormal(v.getNormal().divide(d));
+		
+		return r;
+	}
+
+	private static MeshVertex sumOfVertices(MeshVertex v1, MeshVertex v2) {
+		MeshVertex r = new MeshVertex();
+		r.setId(v1.getId());
+		
+		r.setPosition(v1.getPosition().add(v2.getPosition()));
+		r.setNormal(v1.getNormal().add(v2.getNormal()));
+		
+		return r;
+	}
+
+	private static MeshVertex getTransformed(MeshVertex vertex, float[] transformMatrix) {
+		
+		float[] normalMatrix = new float[16],
+				inverseMatrix = new float[16];
+		FloatUtil.invertMatrix(transformMatrix, inverseMatrix);
+		FloatUtil.transposeMatrix(inverseMatrix, 0, normalMatrix, 0);
+		
+		MeshVertex n = vertex.copy();
+		n.setPosition(vertex.getPosition().getTransformedBy(transformMatrix));
+		n.setNormal(vertex.getNormal().getTransformedBy(normalMatrix));
+		return n;
+	}
+
+	private Map<String, MeshVertex> deepCopyVertices() {
+		Map<String, MeshVertex> copied = new HashMap<String, MeshVertex>();
+		for (Entry<String, MeshVertex> entry : vertices.entrySet()) {
+			copied.put(entry.getKey(), entry.getValue().copy());
+		}
+		return copied;
+	}
 
 	public static MeshFactory parse(InputStream is)
 			throws ParserConfigurationException, SAXException,
@@ -158,6 +263,7 @@ public class MeshFactory {
 			String boneId = boneElement.getAttribute("id");
 			
 			MeshBone bone = new MeshBone();
+			bone.setId(boneId);
 			
 			if (boneElement.hasAttribute("parent_id")) {
 				parentLookup.put(bone, boneElement.getAttribute("parent_id"));
@@ -259,8 +365,8 @@ public class MeshFactory {
 									 new Vector2f(texels[2][0], texels[2][1]));
 		
 		face.setSmooth(triangleElement.hasAttribute("smooth") &&
-					   !triangleElement.getAttributeNode("smooth").equals("0") &&
-					   !triangleElement.getAttributeNode("smooth").equals("false"));
+					   !triangleElement.getAttribute("smooth").equals("0") &&
+					   !triangleElement.getAttribute("smooth").equals("false"));
 		
 		meshFactory.faces.put(faceId, face);
 	}
@@ -307,8 +413,8 @@ private static void parseQuad(MeshFactory meshFactory, Element quadElement)
 									 new Vector2f(texels[3][0], texels[3][1]));
 		
 		face.setSmooth(quadElement.hasAttribute("smooth") &&
-					   !quadElement.getAttributeNode("smooth").equals("0") &&
-					   !quadElement.getAttributeNode("smooth").equals("false"));
+					   !quadElement.getAttribute("smooth").equals("0") &&
+					   !quadElement.getAttribute("smooth").equals("false"));
 		
 		meshFactory.faces.put(faceId, face);
 	}
@@ -321,6 +427,7 @@ private static void parseQuad(MeshFactory meshFactory, Element quadElement)
 		String vertexId = vertexElement.getAttribute("id");
 		
 		MeshVertex vertex = new MeshVertex();
+		vertex.setId(vertexId);
 		
 		Element positionElement = findDirectChildElement(vertexElement, "pos");
 		if (positionElement == null)
@@ -356,16 +463,16 @@ private static void parseQuad(MeshFactory meshFactory, Element quadElement)
 							Float.parseFloat(element.getAttribute("tail_y")),
 							Float.parseFloat(element.getAttribute("tail_z")));
 	}
-	private static Quaternion4f parseRotation(Element element) throws FormatError, NumberFormatException {
+	private static Quaternion parseRotation(Element element) throws FormatError, NumberFormatException {
 
 		if (!element.hasAttribute("rot_x") || !element.hasAttribute("rot_y") ||
 				!element.hasAttribute("rot_z") || !element.hasAttribute("rot_w"))
 			throw new FormatError(String.format("missing rot_x, rot_y, rot_z or rot_w on %s element", element.getTagName()));
 		
-		return new Quaternion4f(Float.parseFloat(element.getAttribute("rot_x")),
-								Float.parseFloat(element.getAttribute("rot_y")),
-								Float.parseFloat(element.getAttribute("rot_z")),
-								Float.parseFloat(element.getAttribute("rot_w")));
+		return new Quaternion(Float.parseFloat(element.getAttribute("rot_x")),
+							  Float.parseFloat(element.getAttribute("rot_y")),
+							  Float.parseFloat(element.getAttribute("rot_z")),
+							  Float.parseFloat(element.getAttribute("rot_w")));
 	}
 
 	private static Iterable<Element> iterElements(Element parentElement, String tagName) {

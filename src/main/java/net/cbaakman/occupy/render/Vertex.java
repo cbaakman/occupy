@@ -70,30 +70,10 @@ public class Vertex {
 
 	public static <T extends Vertex> FloatBuffer wrapInBuffer(List<T> vertices, Class<T> vertexClass) {
 			
-		
-		FloatBuffer buffer = ByteBuffer.allocateDirect(Buffers.SIZEOF_FLOAT * vertices.size() * Vertex.getFloatCount(vertexClass))
-							 .order(ByteOrder.nativeOrder()).asFloatBuffer();
+		FloatBuffer buffer = allocate(vertices.size(), vertexClass);
 		
 		for (T vertex : vertices) {
-			for (Attrib attrib : orderAttribsByIndex(vertexClass)) {
-				try {
-					if (attrib.getTypeClass().equals(Vector3f.class)) {
-						
-						Vector3f vec = (Vector3f)attrib.getValueFor(vertex);
-						
-						buffer.put(vec.getX()).put(vec.getY()).put(vec.getZ());
-					}
-					else if(attrib.getTypeClass().equals(Vector2f.class)) {
-						
-						Vector2f vec = (Vector2f)attrib.getValueFor(vertex);
-						
-						buffer.put(vec.getX()).put(vec.getY());
-					}
-				}
-				catch (IllegalArgumentException | IllegalAccessException e) {
-					throw new SeriousError(e);
-				}
-			}
+			push(buffer, vertex, vertexClass);
 		}
 		
 		buffer.rewind();
@@ -101,10 +81,47 @@ public class Vertex {
 		return buffer;
 	}
 	
-	public static <T extends Vertex> FloatBuffer wrapInBuffer(T[] vertices, Class<T> vertexClass)
-			throws IllegalArgumentException, IllegalAccessException {
+	public static <T extends Vertex> FloatBuffer wrapInBuffer(T[] vertices, Class<T> vertexClass) {
 		
-		return wrapInBuffer(Arrays.asList(vertices), vertexClass);
+		FloatBuffer buffer = allocate(vertices.length, vertexClass);
+		
+		for (T vertex : vertices) {
+			push(buffer, vertex, vertexClass);
+		}
+		
+		buffer.rewind();
+		
+		return buffer;
+	}
+	
+	public static <T extends Vertex> FloatBuffer allocate(int vertexCount, Class<T> vertexClass) {
+
+		FloatBuffer buffer = ByteBuffer.allocateDirect(Buffers.SIZEOF_FLOAT * vertexCount * Vertex.getFloatCount(vertexClass))
+							 .order(ByteOrder.nativeOrder()).asFloatBuffer();
+		return buffer;
+	}
+	
+	public static <T extends Vertex> void push(FloatBuffer buffer, T vertex, Class<T> vertexClass) {
+
+		for (Attrib attrib : orderAttribsByIndex(vertexClass)) {
+			try {
+				if (attrib.getTypeClass().equals(Vector3f.class)) {
+					
+					Vector3f vec = (Vector3f)attrib.getValueFor(vertex);
+					
+					buffer.put(vec.getX()).put(vec.getY()).put(vec.getZ());
+				}
+				else if(attrib.getTypeClass().equals(Vector2f.class)) {
+					
+					Vector2f vec = (Vector2f)attrib.getValueFor(vertex);
+					
+					buffer.put(vec.getX()).put(vec.getY());
+				}
+			}
+			catch (IllegalArgumentException | IllegalAccessException e) {
+				throw new SeriousError(e);
+			}
+		}
 	}
 	
 	public static List<Attrib> orderAttribsByIndex(Class<? extends Vertex> vertexClass) {

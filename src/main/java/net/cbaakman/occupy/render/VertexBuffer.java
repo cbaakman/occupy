@@ -14,11 +14,14 @@ import com.jogamp.opengl.math.FloatUtil;
 
 import lombok.Data;
 import net.cbaakman.occupy.errors.GL3Error;
+import net.cbaakman.occupy.errors.SeriousError;
 
 @Data
 public class VertexBuffer<T extends Vertex> {
 	
 	static Logger logger = Logger.getLogger(VertexBuffer.class);
+	
+	private static VertexBuffer currentMapped = null;
 
 	private int glHandle = 0;
 	private int vertexCount;
@@ -63,35 +66,86 @@ public class VertexBuffer<T extends Vertex> {
 		GL3Error.check(gl3);
 	}
 	
-	public void update(GL3 gl3, T[] vertices, long offset)
-			throws IndexOutOfBoundsException, GL3Error {
-		update(gl3, Arrays.asList(vertices), offset);
-	}
-	
-	public void update(GL3 gl3, List<T> vertices, long offset)
+	public void update(GL3 gl3, T[] vertices, long vertexOffset)
 			throws GL3Error, IndexOutOfBoundsException {
 		
-		if ((vertices.size() + offset) > vertexCount)
+		if (currentMapped != null)
+			throw new SeriousError("a buffer is still mapped");
+		
+		if ((vertices.length + vertexOffset) > vertexCount)
 			throw new IndexOutOfBoundsException();
 				
 		FloatBuffer floatBuffer = Vertex.wrapInBuffer(vertices, getVertexClass());
 		
-		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, glHandle);
+		update(gl3, floatBuffer, vertexOffset);
+	}
+	
+	public void update(GL3 gl3, List<T> vertices, long vertexOffset)
+			throws GL3Error, IndexOutOfBoundsException {
 		
+		if (currentMapped != null)
+			throw new SeriousError("a buffer is still mapped");
+		
+		if ((vertices.size() + vertexOffset) > vertexCount)
+			throw new IndexOutOfBoundsException();
+				
+		FloatBuffer floatBuffer = Vertex.wrapInBuffer(vertices, getVertexClass());
+		
+		update(gl3, floatBuffer, vertexOffset);
+	}
+	
+	private void update(GL3 gl3, FloatBuffer floatBuffer, long vertexOffset) throws GL3Error {
+		
+		if (currentMapped != null)
+			throw new SeriousError("a buffer is still mapped");
+		
+		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, glHandle);
 		GL3Error.check(gl3);
 		
 		gl3.glBufferSubData(GL3.GL_ARRAY_BUFFER,
-							offset * Vertex.getFloatCount(vertexClass) * Buffers.SIZEOF_FLOAT,
+							vertexOffset * Vertex.getFloatCount(vertexClass) * Buffers.SIZEOF_FLOAT,
 							floatBuffer.capacity() * Buffers.SIZEOF_FLOAT, floatBuffer);
-
 		GL3Error.check(gl3);
 		
 		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, 0);
-
 		GL3Error.check(gl3);
 	}
 	
+	/**
+	 * Must not map one vbo before unmapping the other first.
+	 */
+	public FloatBuffer map(GL3 gl3, int access, int vertexOffset, int vertexLength) throws GL3Error {
+		
+		if (currentMapped != null)
+			throw new SeriousError("a buffer is still mapped");
+		
+		int byteOffset = vertexOffset * Vertex.getFloatCount(vertexClass) * Buffers.SIZEOF_FLOAT,
+			byteLength = vertexLength * Vertex.getFloatCount(vertexClass) * Buffers.SIZEOF_FLOAT;
+		
+		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, glHandle);
+		GL3Error.check(gl3);
+		
+		ByteBuffer buffer = gl3.glMapBufferRange(GL3.GL_ARRAY_BUFFER, byteOffset, byteLength, access);
+		GL3Error.check(gl3);
+		
+		currentMapped = this;
+		return buffer.asFloatBuffer();
+	}
+	
+	public void unmap(GL3 gl3) throws GL3Error {
+		gl3.glUnmapBuffer(GL3.GL_ARRAY_BUFFER);
+		GL3Error.check(gl3);
+		
+		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, 0);
+		GL3Error.check(gl3);
+		
+		currentMapped = null;
+	}
+	
 	public void draw(GL3 gl3, int mode) throws GL3Error {
+		
+		if (currentMapped != null)
+			throw new SeriousError("a buffer is still mapped");
 		
 		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, glHandle);
 
@@ -104,30 +158,25 @@ public class VertexBuffer<T extends Vertex> {
 		for (Vertex.Attrib attrib : Vertex.orderAttribsByIndex(vertexClass)) {
 			
 			gl3.glEnableVertexAttribArray(attrib.getIndex());
-
 			GL3Error.check(gl3);
 	        
 	        gl3.glVertexAttribPointer(attrib.getIndex(), attrib.getFloatCount(),
 	        						  GL3.GL_FLOAT, false, stride, offset);
-
 			GL3Error.check(gl3);
 	        
 	        offset += attrib.getFloatCount() * Buffers.SIZEOF_FLOAT;
 		}
         
         gl3.glDrawArrays(mode, 0, vertexCount);
-
 		GL3Error.check(gl3);
 
         for (Vertex.Attrib attrib : Vertex.orderAttribsByIndex(vertexClass)) {
 			
 			gl3.glDisableVertexAttribArray(attrib.getIndex());
-
 			GL3Error.check(gl3);
         }
         
 		gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, 0);
-
 		GL3Error.check(gl3);
 	}
 }
