@@ -25,8 +25,10 @@ import com.jogamp.opengl.math.Quaternion;
 
 import lombok.Data;
 import net.cbaakman.occupy.errors.FormatError;
+import net.cbaakman.occupy.errors.KeyError;
 import net.cbaakman.occupy.math.Vector2f;
 import net.cbaakman.occupy.math.Vector3f;
+import net.cbaakman.occupy.mesh.MeshBoneAnimation.Key;
 import net.cbaakman.occupy.render.BoneTransformation;
 
 @Data
@@ -45,13 +47,100 @@ public class MeshFactory {
 	Map<String, Subset> subsets = new HashMap<String, Subset>();
 	Map<String, MeshBoneAnimation> animations = new HashMap<String, MeshBoneAnimation>();
 	
-	private Map<String, MeshVertex> getTransformedVertices(Map<String, BoneTransformation> transformationsMap) {
+	public Map<String, BoneTransformation> getAnimationState(String animationName, float frame)
+			throws KeyError {
+		
+		if (!animations.containsKey(animationName))
+			throw new KeyError(String.format("No such animation: %s", animationName));
+
+		Map<String, BoneTransformation> transformations = new HashMap<String, BoneTransformation>();
+		MeshBoneAnimation animation = animations.get(animationName);
+		for (MeshBoneAnimation.Layer layer : animation.getLayers()) {
+			
+			String boneId = layer.getBone().getId();
+			
+			// Make sure frame isn't negative:
+			frame += (int)Math.floor(Math.max(0, -frame) / animation.getLength()) * animation.getLength();
+			
+			// Make sure frame is less than animation length:
+			frame -= (int)Math.floor(frame / animation.getLength()) * animation.getLength();
+			
+			int framePrev = Integer.MIN_VALUE,
+				frameNext = Integer.MAX_VALUE,
+				frameFirst = Integer.MAX_VALUE,
+				frameLast = Integer.MIN_VALUE;
+			
+			for (Entry<Integer, MeshBoneAnimation.Key> entry : layer.getKeys().entrySet()) {
+				int keyFrame = entry.getKey();
+				
+				if (keyFrame < frame && keyFrame > framePrev)
+					framePrev = keyFrame;
+				if (keyFrame > frame && keyFrame < frameNext)
+					frameNext = keyFrame;
+				if (keyFrame < frameFirst)
+					frameFirst = keyFrame;
+				if (keyFrame > frameLast)
+					frameLast = keyFrame;
+			}
+			
+			float distanceToPrev;
+			if (framePrev < 0) {
+				framePrev = frameLast;
+				distanceToPrev = frame + animation.getLength() - frameLast;
+			}
+			else
+				distanceToPrev = frame - framePrev;
+			
+			float distanceToNext;
+			if (frameNext > animation.getLength()) {
+				frameNext = frameFirst;
+				distanceToNext = animation.getLength() - frame + frameFirst;
+			}
+			else
+				distanceToNext = frameNext - frame;
+			
+			MeshBoneAnimation.Key keyPrev = layer.getKeys().get(framePrev),
+								  keyNext = layer.getKeys().get(frameNext);
+			
+			transformations.put(boneId, interPolateTransform(keyPrev, keyNext, distanceToPrev, distanceToNext));
+		}
+		
+		return transformations;
+	}
+	
+	private BoneTransformation interPolateTransform(Key keyPrev, Key keyNext, float distanceToPrev, float distanceToNext) {
+
+		
+		float total = distanceToPrev + distanceToNext;
+
+		// fPrev + fNext = 1.0
+		float fPrev, fNext;
+		
+		if (total > 0.0f) {
+			fPrev = distanceToPrev / total;
+			fNext = distanceToNext / total;
+		}
+		else {
+			fPrev = 0.5f;
+			fNext = 0.5f;
+		}
+		
+		Quaternion rotation = new Quaternion();
+		rotation.setSlerp(keyPrev.getRotation(), keyNext.getRotation(), fPrev);
+		
+		Vector3f translation = keyPrev.getTranslation().multiply(fNext)
+						  .add(keyNext.getTranslation().multiply(fPrev));
+		
+		return new BoneTransformation(rotation, translation);
+	}
+
+	public Map<String, MeshVertex> getTransformedVertices(Map<String, BoneTransformation> transformationsMap) {
 		
 		// Initialize counters that are needed to calculate the average transformed vertices:
-		Map<String, Integer> transformationCountPerVertex = new HashMap<String, Integer>();
+		Map<String, Float> transformationWeightPerVertex = new HashMap<String, Float>();
 		Map<String, MeshVertex> averageTransformedVertices = deepCopyVertices();
 		for (String vertexId : averageTransformedVertices.keySet()) {
-			transformationCountPerVertex.put(vertexId, 0);
+			transformationWeightPerVertex.put(vertexId, 0.0f);
 		}
 		
 		for (Entry<String, BoneTransformation> entry : transformationsMap.entrySet()) {
@@ -61,14 +150,30 @@ public class MeshFactory {
 				
 				float[] mr = new float[16],
 						ms = new float[16],
-						mt = new float[16];
+						mt = new float[16],
+						moveToBone = new float[16],
+						moveFromBone = new float[16];
 				FloatUtil.makeIdentity(mt);
 				
 				// Get the total transformation, parents included.
 				MeshBone bone = bones.get(boneId);
 				while(bone != null) {
 					if (transformationsMap.containsKey(bone.getId())) {
+						
+						Vector3f headPosition = bone.getHeadPosition();
+						FloatUtil.makeTranslation(moveToBone, true,
+										-headPosition.getX(), -headPosition.getY(), -headPosition.getZ());
+						FloatUtil.makeTranslation(moveFromBone, true,
+										headPosition.getX(), headPosition.getY(), headPosition.getZ());
+						
 						transformationsMap.get(bone.getId()).toMatrix(ms);
+
+						FloatUtil.multMatrix(ms, moveToBone, mr);
+						ms = mr.clone();
+						
+						FloatUtil.multMatrix(moveFromBone, ms, mr);
+						ms = mr.clone();
+						
 						FloatUtil.multMatrix(ms, mt, mr);
 						mt = mr.clone();
 					}
@@ -81,34 +186,45 @@ public class MeshFactory {
 					
 					MeshVertex transformed = getTransformed(boneVertex, mt);
 					
-					if (transformationCountPerVertex.get(vertexId) > 0) {
+					if (transformationWeightPerVertex.get(vertexId) > 0.0f) {
 
 						MeshVertex current = averageTransformedVertices.get(boneVertex.getId());
-						averageTransformedVertices.put(vertexId, sumOfVertices(transformed, current));
+						averageTransformedVertices.put(vertexId, sumOfVertices(getMultipliedBy(transformed, bone.getWeight()), current));
 					}
 					else
 						averageTransformedVertices.put(vertexId, transformed);
+					
+					transformationWeightPerVertex.put(vertexId, bone.getWeight() + transformationWeightPerVertex.get(vertexId));
 				}
 			}
 		}
 		/* Calculate averages of transformed vertices,
 		 * in case some vertices have been modified by multiple bones. */
-		for (Entry<String, Integer> entry : transformationCountPerVertex.entrySet()) {
+		for (Entry<String, Float> entry : transformationWeightPerVertex.entrySet()) {
 			String vertexId = entry.getKey();
-			int transformCount = entry.getValue();
+			float transformWeight = entry.getValue();
 			MeshVertex vertex = averageTransformedVertices.get(vertexId);
 			
-			if (transformCount > 0)
-				averageTransformedVertices.put(vertexId, getDividedBy(vertex, transformCount));
+			if (transformWeight > 0.0f)
+				averageTransformedVertices.put(vertexId, getDividedBy(vertex, transformWeight));
 		}
 		return averageTransformedVertices;
 	}
 
-	private static MeshVertex getDividedBy(MeshVertex v, float d) {
+	private MeshVertex getMultipliedBy(MeshVertex v, float f) {
 		
 		MeshVertex r = v.copy();
-		r.setPosition(v.getPosition().divide(d));
-		r.setNormal(v.getNormal().divide(d));
+		r.setPosition(v.getPosition().multiply(f));
+		r.setNormal(v.getNormal().multiply(f));
+		
+		return r;
+	}
+
+	private static MeshVertex getDividedBy(MeshVertex v, float f) {
+		
+		MeshVertex r = v.copy();
+		r.setPosition(v.getPosition().divide(f));
+		r.setNormal(v.getNormal().divide(f));
 		
 		return r;
 	}
@@ -230,7 +346,7 @@ public class MeshFactory {
 			String boneId = layerElement.getAttribute("bone_id");
 			MeshBone bone = meshFactory.getBones().get(boneId);
 			
-			MeshBoneAnimation.Layer layer = animation.new Layer();
+			MeshBoneAnimation.Layer layer = new MeshBoneAnimation.Layer();
 			layer.setBone(bone);
 			
 			for (Element keyElement : iterElements(layerElement, "key")) {
@@ -239,9 +355,9 @@ public class MeshFactory {
 					throw new FormatError("key element without frame number");
 				int frame = Integer.parseInt(keyElement.getAttribute("frame"));
 				
-				MeshBoneAnimation.Key key = animation.new Key();
+				MeshBoneAnimation.Key key = new MeshBoneAnimation.Key();
 
-				key.setLocation(parseVector3f(keyElement));
+				key.setTranslation(parseVector3f(keyElement));
 				key.setRotation(parseRotation(keyElement));
 				
 				layer.getKeys().put(frame, key);

@@ -2,6 +2,8 @@ package net.cbaakman.occupy.render;
 
 import java.awt.image.BufferedImage;
 import java.nio.FloatBuffer;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
@@ -11,6 +13,7 @@ import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.math.FloatUtil;
 import com.jogamp.opengl.math.FovHVHalves;
+import com.jogamp.opengl.math.Quaternion;
 import com.jogamp.opengl.util.awt.ImageUtil;
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureData;
@@ -19,10 +22,13 @@ import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
 
 import net.cbaakman.occupy.communicate.Client;
 import net.cbaakman.occupy.errors.MissingGlyphError;
+import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.errors.GL3Error;
+import net.cbaakman.occupy.errors.KeyError;
 import net.cbaakman.occupy.errors.ShaderCompileError;
 import net.cbaakman.occupy.errors.ShaderLinkError;
 import net.cbaakman.occupy.font.Font;
+import net.cbaakman.occupy.math.Vector3f;
 import net.cbaakman.occupy.mesh.MeshFactory;
 
 public class ClientGLEventListener implements GLEventListener {
@@ -81,7 +87,7 @@ public class ClientGLEventListener implements GLEventListener {
 	public void display(GLAutoDrawable drawable) {
 		GL3 gl3 = drawable.getGL().getGL3();
 		
-		float rotation = ((float)(System.currentTimeMillis() - t0)) / 1000;
+		float seconds = ((float)(System.currentTimeMillis() - t0)) / 1000;
 		
         try {
 			float[] projectionMatrix = new float[16],
@@ -116,7 +122,7 @@ public class ClientGLEventListener implements GLEventListener {
 									  0.1f, 1000.0f);
 			
 			FloatUtil.makeTranslation(modelviewMatrix, true, 0.0f, -3.0f, -10.0f);
-			FloatUtil.makeRotationAxis(rotationMatrix, 0, rotation, 0.0f, 1.0f, 0.0f, new float[4]);
+			FloatUtil.makeRotationAxis(rotationMatrix, 0, seconds, 0.0f, 1.0f, 0.0f, new float[4]);
 			FloatUtil.multMatrix(modelviewMatrix, rotationMatrix, resultMatrix);
 			modelviewMatrix = resultMatrix.clone();
 			
@@ -144,7 +150,11 @@ public class ClientGLEventListener implements GLEventListener {
 	        gl3.glUniform1i(textureLocation, 0);
 			GL3Error.check(gl3);
 
-	        glMeshRenderer.render(gl3);
+	        try {
+				glMeshRenderer.render(gl3, meshFactory.getAnimationState("walk", 10 * seconds));
+			} catch (KeyError e) {
+				throw new SeriousError(e);
+			}
 	        
 	        gl3.glUseProgram(0);
 			GL3Error.check(gl3);
@@ -153,9 +163,6 @@ public class ClientGLEventListener implements GLEventListener {
 			GL3Error.check(gl3);
 	        
 	        gl3.glBlendFunc(GL3.GL_SRC_ALPHA, GL3.GL_ONE_MINUS_SRC_ALPHA);
-			GL3Error.check(gl3);
-			
-			gl3.glDisable(GL3.GL_CULL_FACE);
 			GL3Error.check(gl3);
 
 			gl3.glDisable(GL3.GL_DEPTH_TEST);

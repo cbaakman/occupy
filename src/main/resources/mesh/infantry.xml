@@ -129,7 +129,7 @@
 			<norm x="-0.5773" y="0.5773" z="-0.5773" />
 		</vertex>
 		<vertex id="32">
-			<pos x="-0.0002" y="0.0000" z="-0.3000" />
+			<pos x="-0.0002" y="-0.0000" z="-0.3000" />
 			<norm x="0.5773" y="-0.5773" z="-0.5773" />
 		</vertex>
 		<vertex id="33">
@@ -141,7 +141,7 @@
 			<norm x="-0.5773" y="-0.5773" z="0.5773" />
 		</vertex>
 		<vertex id="35">
-			<pos x="-0.5000" y="0.0000" z="-0.3000" />
+			<pos x="-0.5000" y="-0.0000" z="-0.3000" />
 			<norm x="-0.5773" y="-0.5773" z="-0.5773" />
 		</vertex>
 		<vertex id="36">
@@ -177,7 +177,7 @@
 			<norm x="0.5773" y="0.5773" z="-0.5773" />
 		</vertex>
 		<vertex id="44">
-			<pos x="0.0001" y="0.0000" z="-0.3000" />
+			<pos x="0.0001" y="-0.0000" z="-0.3000" />
 			<norm x="-0.5773" y="-0.5773" z="-0.5773" />
 		</vertex>
 		<vertex id="45">
@@ -189,7 +189,7 @@
 			<norm x="0.5773" y="-0.5773" z="0.5773" />
 		</vertex>
 		<vertex id="47">
-			<pos x="0.4999" y="0.0000" z="-0.3000" />
+			<pos x="0.4999" y="-0.0000" z="-0.3000" />
 			<norm x="0.5773" y="-0.5773" z="-0.5773" />
 		</vertex>
 	</vertices>
@@ -458,9 +458,8 @@
 	</subsets>
 	<armature>
 		<bones>
-			<bone id="head" parent_id="torso" tail_x="-0.0114"
-				tail_y="-4.0065" tail_z="0.0047" weight="1.0000" x="-0.0067"
-				y="-3.0014" z="0.0046">
+			<bone id="head" parent_id="torso" tail_x="-0.0114" tail_y="3.9932"
+				tail_z="-0.0226" weight="1.0000" x="-0.0067" y="2.9881" z="-0.0225">
 				<vertices>
 					<vertex id="0" />
 					<vertex id="1" />
@@ -473,8 +472,8 @@
 				</vertices>
 			</bone>
 			<bone id="rightarm" parent_id="rightshoulder" tail_x="-2.0030"
-				tail_y="-2.7467" tail_z="0.0046" weight="1.0000" x="-0.4957"
-				y="-2.7559" z="0.0046">
+				tail_y="2.7333" tail_z="-0.0225" weight="1.0000" x="-0.4957" y="2.7426"
+				z="-0.0225">
 				<vertices>
 					<vertex id="16" />
 					<vertex id="17" />
@@ -487,8 +486,8 @@
 				</vertices>
 			</bone>
 			<bone id="leftarm" parent_id="leftshoulder" tail_x="1.9942"
-				tail_y="-2.7559" tail_z="0.0046" weight="1.0000" x="0.4962"
-				y="-2.7513" z="0.0046">
+				tail_y="2.7426" tail_z="-0.0225" weight="1.0000" x="0.4962" y="2.7380"
+				z="-0.0225">
 				<vertices>
 					<vertex id="24" />
 					<vertex id="25" />
@@ -500,15 +499,13 @@
 					<vertex id="31" />
 				</vertices>
 			</bone>
-			<bone id="righthip" parent_id="base" tail_x="-0.2539"
-				tail_y="-1.5054" tail_z="-0.0000" weight="1.0000" x="-0.0067"
-				y="-1.5054" z="-0.0000" />
-			<bone id="lefthip" parent_id="base" tail_x="0.2457"
-				tail_y="-1.5054" tail_z="-0.0000" weight="1.0000" x="-0.0067"
-				y="-1.5054" z="-0.0000" />
+			<bone id="righthip" parent_id="base" tail_x="-0.2539" tail_y="1.4920"
+				tail_z="-0.0179" weight="1.0000" x="-0.0067" y="1.4920" z="-0.0179" />
+			<bone id="lefthip" parent_id="base" tail_x="0.2457" tail_y="1.4920"
+				tail_z="-0.0179" weight="1.0000" x="-0.0067" y="1.4920" z="-0.0179" />
 			<bone id="rightleg" parent_id="righthip" tail_x="-0.2539"
-				tail_y="-0.0047" tail_z="0.0000" weight="1.0000" x="-0.2539"
-				y="-1.5054" z="-0.0000">
+				tail_y="-0.0087" tail_z="-0.0179" weight="1.0000" x="-0.2539" y="1.4920"
+				z="-0.0179">
 				<vertices>
 					<vertex id="32" />
 					<vertex id="33" />
@@ -520,11 +517,10 @@
 					<vertex id="39" />
 				</vertices>
 			</bone>
-			<bone id="base" tail_x="-0.0067" tail_y="-1.5054"
-				tail_z="-0.0000" weight="1.0000" x="0.0000" y="-1.5054" z="0.7737" />
-			<bone id="leftleg" parent_id="lefthip" tail_x="0.2457"
-				tail_y="-0.0047" tail_z="0.0000" weight="1.0000" x="0.2457"
-				y="-1.5054" z="-0.0000">
+			<bone id="base" tail_x="-0.0067" tail_y="1.4920" tail_z="-0.0179"
+				weight="1.0000" x="0.0000" y="1.4920" z="-0.7916" />
+			<bone id="leftleg" parent_id="lefthip" tail_x="0.2457" tail_y="-0.0087"
+				tail_z="-0.0179" weight="1.0000" x="0.2457" y="1.4920" z="-0.0179">
 				<vertices>
 					<vertex id="40" />
 					<vertex id="41" />
@@ -537,11 +533,10 @@
 				</vertices>
 			</bone>
 			<bone id="leftshoulder" parent_id="torso" tail_x="0.4962"
-				tail_y="-2.7513" tail_z="0.0046" weight="1.0000" x="-0.0067"
-				y="-3.0014" z="0.0046" />
-			<bone id="torso" parent_id="base" tail_x="-0.0067"
-				tail_y="-3.0014" tail_z="0.0046" weight="1.0000" x="-0.0067"
-				y="-1.5054" z="-0.0000">
+				tail_y="2.7380" tail_z="-0.0225" weight="1.0000" x="-0.0067" y="2.9881"
+				z="-0.0225" />
+			<bone id="torso" parent_id="base" tail_x="-0.0067" tail_y="2.9881"
+				tail_z="-0.0225" weight="1.0000" x="-0.0067" y="1.4920" z="-0.0179">
 				<vertices>
 					<vertex id="8" />
 					<vertex id="9" />
@@ -554,108 +549,124 @@
 				</vertices>
 			</bone>
 			<bone id="rightshoulder" parent_id="torso" tail_x="-0.4957"
-				tail_y="-2.7559" tail_z="0.0046" weight="1.0000" x="-0.0067"
-				y="-3.0014" z="0.0046" />
+				tail_y="2.7426" tail_z="-0.0225" weight="1.0000" x="-0.0067" y="2.9881"
+				z="-0.0225" />
 		</bones>
 		<animations>
 			<animation length="15" name="shoot">
 				<layer bone_id="head">
-					<key frame="0" rot_w="0.9989" rot_x="-0.0094" rot_y="-0.0004"
+					<key frame="0" rot_w="0.9989" rot_x="0.0039" rot_y="-0.0002"
 						rot_z="0.0465" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="5" rot_w="0.9944" rot_x="-0.1056" rot_y="-0.0000"
+					<key frame="5" rot_w="0.9990" rot_x="0.0440" rot_y="0.0000"
 						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="15" rot_w="0.9987" rot_x="-0.0000" rot_y="-0.0005"
+					<key frame="15" rot_w="0.9987" rot_x="0.0000" rot_y="-0.0005"
 						rot_z="0.0510" x="0.0000" y="0.0000" z="0.0000" />
 				</layer>
 				<layer bone_id="rightarm">
-					<key frame="0" rot_w="0.4999" rot_x="0.4929" rot_y="0.5013"
-						rot_z="0.5058" x="-0.0001" y="0.0117" z="-0.1071" />
-					<key frame="5" rot_w="0.4478" rot_x="0.4405" rot_y="0.5484"
-						rot_z="0.5521" x="-0.0001" y="0.0117" z="-0.1071" />
-					<key frame="15" rot_w="0.5047" rot_x="0.4978" rot_y="0.4965"
-						rot_z="0.5010" x="-0.0001" y="0.0117" z="-0.1071" />
+					<key frame="0" rot_w="0.5019" rot_x="-0.5006" rot_y="0.4992"
+						rot_z="0.4982" x="-0.0001" y="0.0000" z="0.0000" />
+					<key frame="5" rot_w="0.4730" rot_x="-0.5281" rot_y="0.5265"
+						rot_z="0.4693" x="-0.0001" y="0.0000" z="0.0000" />
+					<key frame="15" rot_w="0.5047" rot_x="-0.4978" rot_y="0.4965"
+						rot_z="0.5010" x="-0.0001" y="0.0000" z="0.0000" />
 				</layer>
 				<layer bone_id="leftarm">
-					<key frame="0" rot_w="0.4033" rot_x="0.3925" rot_y="-0.5582"
-						rot_z="-0.6097" x="-0.0000" y="0.0117" z="0.1071" />
-					<key frame="5" rot_w="0.5544" rot_x="0.4803" rot_y="-0.3052"
-						rot_z="-0.6074" x="-0.0000" y="0.0117" z="0.1071" />
-					<key frame="15" rot_w="0.3865" rot_x="0.3819" rot_y="-0.5801"
-						rot_z="-0.6068" x="-0.0000" y="0.0117" z="0.1071" />
+					<key frame="0" rot_w="0.3958" rot_x="-0.3887" rot_y="-0.5655"
+						rot_z="-0.6103" x="-0.0000" y="0.0000" z="0.0000" />
+					<key frame="5" rot_w="0.4915" rot_x="-0.4427" rot_y="-0.4034"
+						rot_z="-0.6322" x="-0.0000" y="0.0000" z="0.0000" />
+					<key frame="15" rot_w="0.3865" rot_x="-0.3819" rot_y="-0.5801"
+						rot_z="-0.6068" x="-0.0000" y="0.0000" z="0.0000" />
 				</layer>
 				<layer bone_id="rightleg">
-					<key frame="0" rot_w="1.0000" rot_x="0.0089" rot_y="-0.0000"
+					<key frame="0" rot_w="1.0000" rot_x="-0.0089" rot_y="-0.0000"
 						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="5" rot_w="0.9950" rot_x="0.1003" rot_y="-0.0000"
-						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="5" rot_w="0.9950" rot_x="-0.1003" rot_y="-0.0000"
+						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
 					<key frame="15" rot_w="1.0000" rot_x="-0.0000" rot_y="-0.0000"
-						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
+						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
 				</layer>
 				<layer bone_id="leftleg">
-					<key frame="0" rot_w="0.9976" rot_x="-0.0065" rot_y="-0.0004"
+					<key frame="0" rot_w="0.9976" rot_x="0.0065" rot_y="-0.0004"
 						rot_z="0.0691" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="5" rot_w="0.9949" rot_x="-0.0729" rot_y="-0.0051"
+					<key frame="5" rot_w="0.9949" rot_x="0.0729" rot_y="-0.0051"
 						rot_z="0.0690" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="15" rot_w="0.9976" rot_x="-0.0001" rot_y="-0.0000"
+					<key frame="15" rot_w="0.9976" rot_x="0.0001" rot_y="-0.0000"
 						rot_z="0.0692" x="0.0000" y="0.0000" z="0.0000" />
 				</layer>
 				<layer bone_id="leftshoulder">
-					<key frame="0" rot_w="1.0000" rot_x="0.0000" rot_y="-0.0097"
-						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="5" rot_w="0.9941" rot_x="-0.0000" rot_y="-0.1086"
-						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="15" rot_w="1.0000" rot_x="-0.0000" rot_y="-0.0000"
+					<key frame="0" rot_w="0.9999" rot_x="-0.0055" rot_y="-0.0097"
+						rot_z="0.0001" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="5" rot_w="0.9922" rot_x="-0.0614" rot_y="-0.1084"
+						rot_z="0.0067" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="15" rot_w="1.0000" rot_x="0.0000" rot_y="-0.0000"
 						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
 				</layer>
 				<layer bone_id="torso">
-					<key frame="0" rot_w="1.0000" rot_x="0.0055" rot_y="0.0000"
+					<key frame="0" rot_w="1.0000" rot_x="-0.0055" rot_y="-0.0000"
 						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="5" rot_w="0.9981" rot_x="0.0618" rot_y="0.0000"
+					<key frame="5" rot_w="0.9981" rot_x="-0.0618" rot_y="-0.0000"
 						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="15" rot_w="1.0000" rot_x="-0.0000" rot_y="-0.0000"
-						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="15" rot_w="1.0000" rot_x="-0.0000" rot_y="0.0000"
+						rot_z="0.0000" x="0.0000" y="0.0000" z="0.0000" />
 				</layer>
 				<layer bone_id="rightshoulder">
-					<key frame="0" rot_w="1.0000" rot_x="-0.0000" rot_y="-0.0097"
-						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="5" rot_w="0.9941" rot_x="0.0000" rot_y="-0.1086"
-						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="0" rot_w="0.9999" rot_x="-0.0055" rot_y="-0.0097"
+						rot_z="0.0001" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="5" rot_w="0.9922" rot_x="-0.0614" rot_y="-0.1084"
+						rot_z="0.0067" x="0.0000" y="0.0000" z="0.0000" />
 					<key frame="15" rot_w="1.0000" rot_x="-0.0000" rot_y="-0.0000"
 						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
 				</layer>
 			</animation>
 			<animation length="20" name="walk">
 				<layer bone_id="rightarm">
-					<key frame="0" rot_w="0.7551" rot_x="-0.1837" rot_y="-0.1487"
-						rot_z="0.6115" x="-0.0001" y="0.0117" z="-0.1071" />
-					<key frame="10" rot_w="0.7534" rot_x="0.1904" rot_y="0.1542"
-						rot_z="0.6101" x="-0.0001" y="0.0117" z="-0.1071" />
-					<key frame="20" rot_w="0.7531" rot_x="-0.1917" rot_y="-0.1552"
-						rot_z="0.6099" x="-0.0001" y="0.0117" z="-0.1071" />
+					<key frame="0" rot_w="0.7572" rot_x="0.1832" rot_y="-0.1494"
+						rot_z="0.6089" x="-0.0001" y="0.0000" z="0.0000" />
+					<key frame="10" rot_w="0.8386" rot_x="-0.1643" rot_y="0.1818"
+						rot_z="0.4865" x="-0.0001" y="0.0000" z="0.0000" />
+					<key frame="20" rot_w="0.7531" rot_x="0.1917" rot_y="-0.1552"
+						rot_z="0.6099" x="-0.0001" y="0.0000" z="0.0000" />
 				</layer>
 				<layer bone_id="leftarm">
-					<key frame="0" rot_w="0.7520" rot_x="0.1834" rot_y="-0.1500"
-						rot_z="-0.6151" x="-0.0000" y="0.0117" z="0.1071" />
-					<key frame="10" rot_w="0.7498" rot_x="-0.1922" rot_y="0.1572"
-						rot_z="-0.6133" x="-0.0000" y="0.0117" z="0.1071" />
-					<key frame="20" rot_w="0.7500" rot_x="0.1914" rot_y="-0.1566"
-						rot_z="-0.6135" x="-0.0000" y="0.0117" z="0.1071" />
+					<key frame="0" rot_w="0.8546" rot_x="-0.1517" rot_y="-0.1819"
+						rot_z="-0.4621" x="-0.0000" y="0.0000" z="0.0000" />
+					<key frame="10" rot_w="0.7549" rot_x="0.1909" rot_y="0.1588"
+						rot_z="-0.6070" x="-0.0000" y="0.0000" z="0.0000" />
+					<key frame="20" rot_w="0.8542" rot_x="-0.1576" rot_y="-0.1905"
+						rot_z="-0.4573" x="-0.0000" y="0.0000" z="0.0000" />
 				</layer>
 				<layer bone_id="rightleg">
-					<key frame="0" rot_w="0.9745" rot_x="0.2243" rot_y="-0.0000"
+					<key frame="0" rot_w="0.9745" rot_x="-0.2243" rot_y="-0.0000"
 						rot_z="-0.0061" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="10" rot_w="0.9704" rot_x="-0.2415" rot_y="0.0000"
+					<key frame="10" rot_w="0.9704" rot_x="0.2415" rot_y="0.0000"
 						rot_z="0.0066" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="20" rot_w="0.9721" rot_x="0.2343" rot_y="-0.0000"
+					<key frame="20" rot_w="0.9721" rot_x="-0.2343" rot_y="-0.0000"
 						rot_z="-0.0064" x="0.0000" y="0.0000" z="0.0000" />
 				</layer>
 				<layer bone_id="leftleg">
-					<key frame="0" rot_w="0.9722" rot_x="-0.2341" rot_y="-0.0000"
+					<key frame="0" rot_w="0.9722" rot_x="0.2341" rot_y="-0.0000"
 						rot_z="0.0049" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="10" rot_w="0.9717" rot_x="0.2360" rot_y="0.0000"
+					<key frame="10" rot_w="0.9717" rot_x="-0.2360" rot_y="0.0000"
 						rot_z="-0.0050" x="0.0000" y="0.0000" z="0.0000" />
-					<key frame="20" rot_w="0.9697" rot_x="-0.2442" rot_y="-0.0000"
+					<key frame="20" rot_w="0.9697" rot_x="0.2442" rot_y="-0.0000"
 						rot_z="0.0051" x="0.0000" y="0.0000" z="0.0000" />
+				</layer>
+				<layer bone_id="leftshoulder">
+					<key frame="0" rot_w="0.9820" rot_x="0.0000" rot_y="0.0000"
+						rot_z="0.1889" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="10" rot_w="1.0000" rot_x="0.0000" rot_y="0.0000"
+						rot_z="0.0084" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="20" rot_w="0.9812" rot_x="0.0000" rot_y="0.0000"
+						rot_z="0.1929" x="0.0000" y="0.0000" z="0.0000" />
+				</layer>
+				<layer bone_id="rightshoulder">
+					<key frame="0" rot_w="1.0000" rot_x="-0.0000" rot_y="-0.0000"
+						rot_z="-0.0034" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="10" rot_w="0.9880" rot_x="-0.0000" rot_y="-0.0000"
+						rot_z="-0.1544" x="0.0000" y="0.0000" z="0.0000" />
+					<key frame="20" rot_w="1.0000" rot_x="-0.0000" rot_y="-0.0000"
+						rot_z="-0.0000" x="0.0000" y="0.0000" z="0.0000" />
 				</layer>
 			</animation>
 		</animations>

@@ -90,6 +90,19 @@ public class GLMeshRenderer {
 	}
 	
 	public void render(GL3 gl3) throws GL3Error {
+		renderSubsetsWith(gl3, meshFactory.getVertices());
+	}
+
+	
+	public void render(GL3 gl3, Map<String, BoneTransformation> transformations) throws GL3Error {
+		
+		Map<String, MeshVertex> vertices = meshFactory.getTransformedVertices(transformations);
+		
+		renderSubsetsWith(gl3, vertices);
+	}
+	
+	private void renderSubsetsWith(GL3 gl3, Map<String, MeshVertex> verticesToUse) throws GL3Error {
+
 		for (Entry<String, Subset> entry : meshFactory.getSubsets().entrySet()) {
 
 			String subsetId = entry.getKey();
@@ -99,14 +112,14 @@ public class GLMeshRenderer {
 				textureMap.get(subsetId).enable(gl3);;
 				textureMap.get(subsetId).bind(gl3);
 				
-				renderSubset(gl3, subsetId, subset);
+				renderSubset(gl3, subsetId, subset, verticesToUse);
 
 				textureMap.get(subsetId).disable(gl3);;
 			}
 		}
 	}
 
-	private void renderSubset(GL3 gl3, String subsetId, Subset subset) throws GL3Error {
+	private void renderSubset(GL3 gl3, String subsetId, Subset subset, Map<String, MeshVertex> verticesToUse) throws GL3Error {
 
 		VertexBuffer<MeshRenderVertex> vbo = vboMap.get(subsetId);
 		
@@ -116,7 +129,7 @@ public class GLMeshRenderer {
 			MeshRenderVertex[] vertices = new MeshRenderVertex[face.getVertices().size()];
 			for (int i = 0; i < face.getVertices().size(); i++) {
 				Vector2f texCoord = face.getTexCoords().get(i);
-				MeshVertex meshVertex = face.getVertices().get(i);
+				MeshVertex meshVertex = verticesToUse.get(face.getVertices().get(i).getId());
 				
 				vertices[i] = new MeshRenderVertex(meshVertex.getPosition(), meshVertex.getNormal(), texCoord);
 			}

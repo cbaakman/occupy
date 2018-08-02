@@ -43,8 +43,16 @@ public class Vector3f implements Comparable<Vector3f> {
 		return new Vector3f(x + o.x, y + o.y, z + o.z);
 	}
 
-	public Vector3f divide(float d) {
-		return new Vector3f(x / d, y / d, z / d);
+	public Vector3f subtract(Vector3f o) {
+		return new Vector3f(x - o.x, y - o.y, z - o.z);
+	}
+
+	public Vector3f divide(float f) {
+		return new Vector3f(x / f, y / f, z / f);
+	}
+
+	public Vector3f multiply(float f) {
+		return new Vector3f(x * f, y * f, z * f);
 	}
 
 	public Vector3f copy() {
@@ -59,5 +67,10 @@ public class Vector3f implements Comparable<Vector3f> {
 		FloatUtil.multMatrixVec(matrix, v, r);
 		
 		return new Vector3f(r[0], r[1], r[2]);
+	}
+	
+	@Override
+	public String toString() {
+		return String.format("(%f %f %f)", x, y, z);
 	}
 }

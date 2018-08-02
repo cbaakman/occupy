@@ -13,12 +13,12 @@ import net.cbaakman.occupy.math.Vector3f;
 @Data
 public class MeshBoneAnimation {
 	@Data
-	public class Key {
+	public static class Key {
 		Quaternion rotation = new Quaternion();
-		Vector3f location = new Vector3f();
+		Vector3f translation = new Vector3f();
 	}
 	@Data
-	public class Layer {
+	public static class Layer {
 		private MeshBone bone = null;
 		private SortedMap<Integer, Key> keys = new TreeMap<Integer, Key>();
 	}
