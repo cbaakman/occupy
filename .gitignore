@@ -1,7 +1,17 @@
+# vi temporary files
+*.swp
+
 # Eclipse
 .settings
 .classpath
 .project
+
+# Blender
+*.blend1
+
+# Generated resource files
+*.png
+*.xml
 
 # Generated
 target
