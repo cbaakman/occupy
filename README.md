@@ -18,4 +18,4 @@ Run mvn package from the project root directory
 Use the blender xml exporter to export from the art/mesh/*.blend files as xml into src/main/resources/mesh
 
 ## Updating an image
-Use gimp to export from the art/image/*.xcf files as png into src/main/resources/images
+Use gimp to export from the art/image/*.xcf files as png into src/main/resources/image
