@@ -3,6 +3,7 @@ package net.cbaakman.occupy.mesh;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -17,13 +18,20 @@ public class TestParser {
 	public void testParseXML() throws IOException,
 									  ParserConfigurationException,
 									  SAXException, FormatError {
-		MeshFactory meshFactory = MeshFactory.parse(TestParser.class.getResourceAsStream("/mesh/infantry.xml"));
+		InputStream is = TestParser.class.getResourceAsStream("/mesh/infantry.xml");
 		
-		assertTrue(meshFactory.getVertices().size() > 0);
-		assertTrue(meshFactory.getFaces().size() > 0);
-		assertTrue(meshFactory.getSubsets().size() > 0);
-		assertTrue(meshFactory.getBones().size() > 0);
-		assertTrue(meshFactory.getAnimations().size() > 0);
-		assertTrue(meshFactory.getAnimations().get("shoot").getLayers().get(0).getKeys().size() > 0);
+		try {
+			MeshFactory meshFactory = MeshFactory.parse(is);
+		
+			assertTrue(meshFactory.getVertices().size() > 0);
+			assertTrue(meshFactory.getFaces().size() > 0);
+			assertTrue(meshFactory.getSubsets().size() > 0);
+			assertTrue(meshFactory.getBones().size() > 0);
+			assertTrue(meshFactory.getAnimations().size() > 0);
+			assertTrue(meshFactory.getAnimations().get("shoot").getLayers().get(0).getKeys().size() > 0);
+		}
+		finally {
+			is.close();
+		}
 	}
 }

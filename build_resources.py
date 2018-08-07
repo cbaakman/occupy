@@ -6,10 +6,7 @@ from glob import glob
 import os
 import subprocess
 from string import ascii_uppercase
-
-
-image_list = ['infantry']
-mesh_list = ['infantry']
+from zipfile import ZipFile
 
 
 windows_drives = list(ascii_uppercase)
@@ -62,18 +59,30 @@ def find_xml_exporter():
                              https://github.com/cbaakman/mesh-exporter")
 
 
+def mkdirs(path):
+    dirname, basename =os.path.split(path)
+    if dirname != '':
+        mkdirs(dirname)
+    if not os.path.isdir(path):
+        os.mkdir(path)
+
+
 # Verify that all necessary software is present and derive their paths:
 blender_exe = find_blender()
 xml_exporter = find_xml_exporter()
 gimp_exe = find_gimp()
 
 
+# Build directories if not present:
+mkdirs(os.path.join('src', 'main', 'resources', 'mesh'))
+mkdirs(os.path.join('src', 'main', 'resources', 'image'))
+mkdirs(os.path.join('src', 'test', 'resources', 'map'))
+
+
 # Build meshes:
-for name in mesh_list:
-
-    blend_path = os.path.join('art', 'mesh', '%s.blend' % name)
-    xml_path = os.path.join('src', 'main', 'resources', 'mesh', '%s.xml' % name)
-
+mesh_list = [(os.path.join('art', 'mesh', 'infantry.blend'), 'infantry', os.path.join('src', 'main', 'resources', 'mesh', 'infantry.xml')),
+             (os.path.join('art', 'mesh', 'terrain.blend'), 'terrain', os.path.join('src', 'test', 'resources', 'map', 'terrain.xml'))]
+for blend_path, name, xml_path in mesh_list:
     r = subprocess.call([
         blender_exe, blend_path, '--background', '--python', xml_exporter,
         '--', name, xml_path
@@ -86,6 +95,8 @@ for name in mesh_list:
 
 
 # Build images:
+image_list = [(os.path.join('art', 'image', 'infantry.xcf'), os.path.join('src', 'main', 'resources', 'mesh', 'infantry.png')),
+              (os.path.join('art', 'image', 'green.xcf'), os.path.join('src', 'test', 'resources', 'map', 'green.png'))]
 error_path = tempfile.mktemp()
 script_str = """
 import gimpfu
@@ -102,26 +113,29 @@ def convert(xcf_path, png_path):
 
 
 try:
-    for name in %s:
-        xcf_path = os.path.join('art', 'image', '%%s.xcf' %% name)
-        png_path = os.path.join('src', 'main', 'resources', 'image', '%%s.png' %% name)
-
+    for xcf_path, png_path in %s:
         convert(xcf_path, png_path)
-    pdb.gimp_quit(0)
 except:
     traceback.print_exc(file=open('%s', 'w'))
-    pdb.gimp_quit(1)
 """ % (str(image_list), error_path)
 
 subprocess.call([
-    gimp_exe, '--verbose', '-n', '--batch-interpreter=python-fu-eval', '-b',
-    script_str
+    gimp_exe, '--verbose', '-n', '--batch-interpreter=python-fu-eval',
+    '-b', script_str,
+    '-b', "pdb.gimp_quit(1)"
 ])
 # Since gimpfu always exits with 0, we must set an error flag on a file:
 if os.path.isfile(error_path):
     os.remove(error_path)
     sys.exit(1)
 
+# Store the map components in an archive:
+map_contents = [os.path.join('src', 'test', 'resources', 'map', 'terrain.xml'),
+                os.path.join('src', 'test', 'resources', 'map', 'green.png')]
+map_archive = os.path.join('src', 'test', 'resources', 'map', 'testmap.zip')
+with ZipFile(map_archive, 'w') as z:
+    for path in map_contents:
+        z.write(path, os.path.basename(path))
+        os.remove(path)
 
-# Check that everything was generated:
 print("\nAll resources have been built successfully.")

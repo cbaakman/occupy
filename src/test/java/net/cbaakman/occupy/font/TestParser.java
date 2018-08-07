@@ -1,6 +1,7 @@
 package net.cbaakman.occupy.font;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -15,6 +16,12 @@ public class TestParser {
 	public void testParseSVG() throws IOException,
 									  ParserConfigurationException,
 									  SAXException, FormatError {
-		FontFactory fontFactory = FontFactory.parse(TestParser.class.getResourceAsStream("/font/Lumean.svg"));
+		InputStream is = TestParser.class.getResourceAsStream("/font/Lumean.svg");
+		try {
+			FontFactory fontFactory = FontFactory.parse(is);
+		}
+		finally {
+			is.close();
+		}
 	}
 }

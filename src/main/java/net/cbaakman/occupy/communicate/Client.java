@@ -6,6 +6,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
@@ -20,6 +21,7 @@ import java.awt.image.BufferedImage;
 import javax.swing.JFrame;
 
 import org.apache.log4j.Logger;
+import org.hamcrest.core.Is;
 
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
@@ -188,7 +190,13 @@ public abstract class Client {
 
 			@Override
 			public FontFactory call() throws Exception {
-				return FontFactory.parse(Client.class.getResourceAsStream("/font/Lumean.svg"));
+				InputStream is = Client.class.getResourceAsStream("/font/Lumean.svg");
+				try {
+					return FontFactory.parse(is);
+				}
+				finally {
+					is.close();
+				}
 			}
 		});
 		final Future<Font> fFont = loader.add(new LoadJob<Font>(){
@@ -207,14 +215,26 @@ public abstract class Client {
 
 			@Override
 			public BufferedImage call() throws Exception {
-				return ImageIO.read(Client.class.getResourceAsStream("/image/infantry.png"));
+				InputStream is = Client.class.getResourceAsStream("/image/infantry.png");
+				try {
+					return ImageIO.read(is);
+				}
+				finally {
+					is.close();
+				}
 			}
 		});
 		Future<MeshFactory> fInfantryMeshFactory = loader.add(new LoadJob<MeshFactory>() {
 
 			@Override
 			public MeshFactory call() throws Exception {
-				return MeshFactory.parse(Client.class.getResourceAsStream("/mesh/infantry.xml"));
+				InputStream is = Client.class.getResourceAsStream("/mesh/infantry.xml");
+				try {
+					return MeshFactory.parse(is);
+				}
+				finally {
+					is.close();
+				}
 			}
 		});
 

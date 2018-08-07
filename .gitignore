@@ -7,11 +7,12 @@
 .project
 
 # Blender
-*.blend1
+*.blend[0-9]
 
 # Generated resource files
 *.png
 *.xml
+*.zip
 
 # Generated
 target

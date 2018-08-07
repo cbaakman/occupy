@@ -2,6 +2,7 @@ package net.cbaakman.occupy.mesh;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -260,14 +261,25 @@ public class MeshFactory {
 		return copied;
 	}
 
-	public static MeshFactory parse(InputStream is)
+	public static MeshFactory parse(final InputStream is)
 			throws ParserConfigurationException, SAXException,
 				   IOException, FormatError, NumberFormatException {
 		
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder = factory.newDocumentBuilder();
-		Document document = builder.parse(is);
-		is.close();
+		InputStream nonClosingInputStream = new InputStream() {
+
+			@Override
+			public int read() throws IOException {
+				return is.read();
+			}
+			
+			@Override
+			public void close () {
+				// We don't want the xml parser to close the stream.
+			}
+		};
+		Document document = builder.parse(nonClosingInputStream);
 
 		Element meshElement = document.getDocumentElement();
 		if (!meshElement.getTagName().equalsIgnoreCase("mesh"))
