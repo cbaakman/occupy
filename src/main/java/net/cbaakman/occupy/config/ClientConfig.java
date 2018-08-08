@@ -1,6 +1,8 @@
 package net.cbaakman.occupy.config;
 
+import java.io.File;
 import java.net.InetAddress;
+import java.nio.file.Path;
 
 import lombok.Data;
 import net.cbaakman.occupy.network.Address;
@@ -15,4 +17,6 @@ public class ClientConfig {
 				screenHeight = 600;
 	
 	private int loadConcurrency = 10;
+
+	private Path dataDir = null;
 }

@@ -1,5 +1,7 @@
 package net.cbaakman.occupy.communicate.enums;
 
 public enum RequestType {
-	LOGIN
+	LOGIN,
+	DOWNLOAD_MAP,
+	GET_SERVER_INFO
 }

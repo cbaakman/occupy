@@ -3,6 +3,8 @@ package net.cbaakman.occupy.network;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
+import org.apache.log4j.Logger;
+
 import net.cbaakman.occupy.communicate.Identifier;
 import net.cbaakman.occupy.communicate.Packet;
 import net.cbaakman.occupy.communicate.Server;
@@ -12,6 +14,8 @@ import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.SeriousError;
 
 public class NetworkServer extends Server {
+	
+	Logger logger = Logger.getLogger(NetworkServer.class);
 
 	UDPMessenger udpMessenger;
 	TCPServer tcpServer;

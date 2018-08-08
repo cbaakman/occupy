@@ -4,24 +4,22 @@ import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.Serializable;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
 
 import javax.imageio.ImageIO;
+import javax.xml.bind.DatatypeConverter;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.log4j.Logger;
 import org.xml.sax.SAXException;
-
-import com.jogamp.opengl.util.texture.Texture;
 
 import lombok.Data;
 import net.cbaakman.occupy.errors.FormatError;
@@ -30,12 +28,12 @@ import net.cbaakman.occupy.math.Triangle3f;
 import net.cbaakman.occupy.math.Vector3f;
 import net.cbaakman.occupy.mesh.MeshFace;
 import net.cbaakman.occupy.mesh.MeshFactory;
-import lombok.Data;
 
 @Data
 public class GameMap {
 	static Logger logger = Logger.getLogger(GameMap.class);
 	
+	private Properties info;
 	private MeshFactory terrainMeshFactory;
 	private Map<String, BufferedImage> textureMap = new HashMap<String, BufferedImage>();
 	
@@ -62,6 +60,11 @@ public class GameMap {
 				
 				gameMap.setTerrainMeshFactory(meshFactory);
 			}
+			else if (zipEntry.getName().toLowerCase().equals("info.txt")) {
+				Properties info = readInfo(zipInputStream);
+				
+				gameMap.setInfo(info);
+			}
 		}
 		
 		if (gameMap.getTerrainMeshFactory() == null)
@@ -69,7 +72,34 @@ public class GameMap {
 		
 		return gameMap;
 	}
+	
+	public static String getFileHash(InputStream is) throws IOException {
+		try {
+			MessageDigest digest = MessageDigest.getInstance("MD5");
+			
+			byte[] buffer = new byte[1024];
+		    int n;
+
+	        while (true) {
+	            n = is.read(buffer);
+	            if (n > 0) {
+	                digest.update(buffer, 0, n);
+	            }
+	            else
+	            	break;
+	        }
+	        return DatatypeConverter.printHexBinary(digest.digest());
+		} catch (NoSuchAlgorithmException e) {
+			throw new SeriousError(e);
+		}
+	}
 		
+	private static Properties readInfo(InputStream is) throws IOException {
+		Properties info = new Properties();
+		info.load(is);
+		return info;
+	}
+
 	public List<Triangle3f> getTerrainTriangles() {
 		
 		List<Triangle3f> triangles = new ArrayList<Triangle3f>();

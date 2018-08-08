@@ -1,10 +1,16 @@
 package net.cbaakman.occupy.communicate;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
 import java.security.InvalidKeyException;
 import java.util.Date;
 import java.util.HashMap;
@@ -23,6 +29,7 @@ import net.cbaakman.occupy.Updatable;
 import net.cbaakman.occupy.Update;
 import net.cbaakman.occupy.annotations.ClientToServer;
 import net.cbaakman.occupy.annotations.ServerToClient;
+import net.cbaakman.occupy.authenticate.Authenticator;
 import net.cbaakman.occupy.authenticate.Credentials;
 import net.cbaakman.occupy.communicate.enums.PacketType;
 import net.cbaakman.occupy.communicate.enums.RequestType;
@@ -34,8 +41,12 @@ import net.cbaakman.occupy.errors.ErrorQueue;
 import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.RenderError;
 import net.cbaakman.occupy.errors.SeriousError;
+import net.cbaakman.occupy.game.GameMap;
 import net.cbaakman.occupy.security.SSLChannel;
 import org.apache.log4j.Logger;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 public abstract class Server {
 	
@@ -66,6 +77,42 @@ public abstract class Server {
 		this.config = config;
 	}
 
+	public static String getVersion() {
+		MavenXpp3Reader reader = new MavenXpp3Reader();
+		Model model;
+		try {
+			model = reader.read(new FileReader("pom.xml"));
+		} catch (IOException | XmlPullParserException e) {
+			throw new SeriousError(e);
+		}
+		return model.getVersion();
+	}
+	
+	public ServerInfo getInfo() {
+		ServerInfo info = new ServerInfo();
+		
+		FileInputStream mis;
+		try {
+			mis = new FileInputStream(getMapFile());
+		} catch (FileNotFoundException e) {
+			throw new SeriousError(e);
+		}
+		try {
+			info.setMapHash(GameMap.getFileHash(mis));
+		} catch (IOException e) {
+			throw new SeriousError(e);
+		} finally {
+			try {
+				mis.close();
+			} catch (IOException e) {
+				throw new SeriousError(e);
+			}
+		}
+		
+		info.setServerVersion(getVersion());
+		
+		return info;
+	}
 
 	public void run() throws InitError {
 
@@ -123,6 +170,14 @@ public abstract class Server {
 					writeResponse(ResponseType.AUTHENTICATION_ERROR, connection);
 				}
 			}
+			else if (request.equals(RequestType.GET_SERVER_INFO)) {
+				writeResponse(ResponseType.OK, connection);
+				sendInfo(connection);
+			}
+			else if (request.equals(RequestType.DOWNLOAD_MAP)) {
+				writeResponse(ResponseType.OK, connection);
+				sendMap(connection);
+			}
 		} catch (ClassNotFoundException | InvalidKeyException | NoSuchPaddingException |
 				 IllegalBlockSizeException | BadPaddingException e) {
 			
@@ -133,6 +188,35 @@ public abstract class Server {
 		}
 	}
 	
+	private void sendInfo(Connection connection) throws IOException {
+		ServerInfo info = getInfo();
+
+		ObjectOutputStream oos = new ObjectOutputStream(connection.getOutputStream());
+		oos.writeObject(info);
+		oos.flush();
+	}
+	
+	private void sendMap(Connection connection) throws IOException {
+		
+		OutputStream os = connection.getOutputStream();
+		Files.copy(getMapFile().toPath(), os);
+		os.flush();
+	}
+	
+	private File getMapFile() {
+		if (config.getDataDir() == null)
+			throw new SeriousError("no data dir set in config");
+		
+		return new File(config.getDataDir().toFile(), "map.zip");
+	}
+	
+	private File getPasswordFile() {
+		if (config.getDataDir() == null)
+			throw new SeriousError("no data dir set in config");
+		
+		return new File(config.getDataDir().toFile(), "passwd");
+	}
+
 	private static Credentials receiveCredentials(Connection connection) throws IOException,
 																		 InvalidKeyException,
 																		 NoSuchPaddingException,
@@ -159,7 +243,14 @@ public abstract class Server {
 
 	private void onClientLogin(Identifier clientId, Credentials credentials) throws AuthenticationError {
 		
-		// For now, always accept the credentials.
+		Authenticator authenticator = new Authenticator(getPasswordFile());
+		
+		try {
+			if (!authenticator.authenticate(credentials))
+				throw new AuthenticationError("invalid credentials");
+		} catch (IOException e) {
+			throw new SeriousError(e);
+		}
 		
 		synchronized(clientRecords) {
 			clientRecords.put(clientId, new ClientRecord(clientId));

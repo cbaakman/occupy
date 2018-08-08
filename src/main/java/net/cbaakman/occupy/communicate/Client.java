@@ -5,11 +5,16 @@ import java.awt.Toolkit;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -21,7 +26,9 @@ import java.awt.image.BufferedImage;
 import javax.swing.JFrame;
 
 import org.apache.log4j.Logger;
-import org.hamcrest.core.Is;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
@@ -73,6 +80,24 @@ public abstract class Client {
 		this.config = config;
 	}
 	
+	public static String getVersion() {
+		MavenXpp3Reader reader = new MavenXpp3Reader();
+		Model model;
+		try {
+			model = reader.read(new FileReader("pom.xml"));
+		} catch (IOException | XmlPullParserException e) {
+			throw new SeriousError(e);
+		}
+		return model.getVersion();
+	}
+	
+	public File getMapFile(String name) {
+		if (config.getDataDir() == null)
+			throw new SeriousError("data dir not set in config");
+		
+		return new File(config.getDataDir().toFile(), String.format("map-%s.zip", name));
+	}
+	
 	public abstract void sendPacket(Packet packet) throws CommunicationError;
 	protected abstract Connection connectToServer() throws CommunicationError;
 
@@ -86,6 +111,82 @@ public abstract class Client {
 		}
 		else if (message.getType().equals(PacketType.LOGOUT)) {
 			disconnectFromServer();
+		}
+	}
+	
+	public void downloadMap(String saveAsName) throws CommunicationError, IOException {
+		Connection connection = connectToServer();
+		
+		InputStream mapInputStream;
+
+		try {
+			// Tell the server that we want this map:
+			ObjectOutputStream oos = new ObjectOutputStream(connection.getOutputStream());
+			oos.writeObject(RequestType.DOWNLOAD_MAP);
+			oos.flush();
+			
+			// Read the server's response:
+			ObjectInputStream ois = new ObjectInputStream(connection.getInputStream());
+			ResponseType response = (ResponseType)ois.readObject();	
+			
+			if (response.equals(ResponseType.OK)) {
+				
+				// Assume the rest of the data is the map file:
+				mapInputStream = connection.getInputStream();
+			}
+			else
+				throw new CommunicationError(String.format("unexpected response from server: %s", response.name()));
+
+		} catch (ClassNotFoundException | IOException e) {
+			connection.close();
+			throw new CommunicationError(e);
+		}
+		
+		// Download map:
+		try {
+			Files.copy(mapInputStream, getMapFile(saveAsName).toPath());
+		}
+		finally {
+			// Always try to close the connection to the server.
+			try {
+				connection.close();
+			} catch (IOException e) {
+				throw new CommunicationError(e);
+			}
+		}
+	}
+
+	public ServerInfo getServerInfo() throws CommunicationError {
+		Connection connection = connectToServer();
+		
+		try {
+			// Tell the server that we want its info:
+			ObjectOutputStream oos = new ObjectOutputStream(connection.getOutputStream());
+			oos.writeObject(RequestType.GET_SERVER_INFO);
+			oos.flush();
+
+			// Read the server's response:
+			ObjectInputStream ois = new ObjectInputStream(connection.getInputStream());
+			ResponseType response = (ResponseType)ois.readObject();
+			
+			if (response.equals(ResponseType.OK)) {
+				// Read info (must create a new objectinputstream here):
+				ois = new ObjectInputStream(connection.getInputStream());
+				ServerInfo info = (ServerInfo)ois.readObject();
+				return info;
+			}
+			else
+				throw new CommunicationError(String.format("unexpected response from server: %s", response.name()));
+
+		} catch (ClassNotFoundException | IOException e) {
+			throw new CommunicationError(e);
+		} finally {
+			// Always try to close the connection to the server.
+			try {
+				connection.close();
+			} catch (IOException e) {
+				throw new CommunicationError(e);
+			}
 		}
 	}
 	
@@ -119,12 +220,11 @@ public abstract class Client {
 				return;
 			}
 			else if (response.equals(ResponseType.AUTHENTICATION_ERROR))
-				throw new AuthenticationError();
-			
-		} catch (ClassNotFoundException e) {
-			throw new SeriousError(e);
-			
-		} catch (IOException | InvalidKeyException e) {
+				throw new AuthenticationError("server rejected the credentials");
+			else
+				throw new CommunicationError(String.format("unexpected response from server: %s", response.name()));
+						
+		} catch (ClassNotFoundException | IOException | InvalidKeyException e) {
 			throw new CommunicationError(e);
 			
 		} finally {
@@ -326,6 +426,7 @@ public abstract class Client {
 	}
 
 	public void run() throws InitError, RenderError {
+		running = true;
 		
 		initCommunication();
 		initClient();
@@ -333,10 +434,9 @@ public abstract class Client {
 		long ticks0 = System.currentTimeMillis(),
 			 ticks;
 		float dt;
-		running = true;
 		
 		try {
-			while (running) {
+			while (running) {				
 				ticks = System.currentTimeMillis();
 				dt = (float)(ticks - ticks0) / 1000;
 	
@@ -353,7 +453,7 @@ public abstract class Client {
 		} finally {  // always try to shut down tidily
 			if (connectedToServer())
 				disconnectFromServer();
-			
+
 			shutdownClient();
 			shutdownCommunication();
 		}
