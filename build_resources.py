@@ -137,5 +137,6 @@ with ZipFile(map_archive, 'w') as z:
     for path in map_contents:
         z.write(path, os.path.basename(path))
         os.remove(path)
+    z.writestr('info.txt', "name: test")
 
 print("\nAll resources have been built successfully.")
