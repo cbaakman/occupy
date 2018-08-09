@@ -215,7 +215,7 @@ public class ClientGLEventListener implements GLEventListener {
 			texture.setTexParameterf(gl3, GL3.GL_TEXTURE_WRAP_S, GL3.GL_REPEAT);
 			texture.setTexParameterf(gl3, GL3.GL_TEXTURE_WRAP_T, GL3.GL_REPEAT);
 			
-			glMeshRenderer.setTexture("Material", texture);
+			glMeshRenderer.setTexture("infantry", texture);
 			
 			meshShaderProgram = Shader.createProgram(gl3, VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
 	        

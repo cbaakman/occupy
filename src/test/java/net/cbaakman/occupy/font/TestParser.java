@@ -16,7 +16,7 @@ public class TestParser {
 	public void testParseSVG() throws IOException,
 									  ParserConfigurationException,
 									  SAXException, FormatError {
-		InputStream is = TestParser.class.getResourceAsStream("/font/Lumean.svg");
+		InputStream is = TestParser.class.getResourceAsStream("/net/cbaakman/occupy/font/lumean.svg");
 		try {
 			FontFactory fontFactory = FontFactory.parse(is);
 		}

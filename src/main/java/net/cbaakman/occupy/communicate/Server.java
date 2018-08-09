@@ -25,6 +25,7 @@ import javax.crypto.NoSuchPaddingException;
 import lombok.Data;
 import lombok.Setter;
 import lombok.AccessLevel;
+import net.cbaakman.occupy.Identifier;
 import net.cbaakman.occupy.Updatable;
 import net.cbaakman.occupy.Update;
 import net.cbaakman.occupy.annotations.ClientToServer;
@@ -149,8 +150,6 @@ public abstract class Server {
 
 	protected void onClientConnect(Identifier clientId, Connection connection)
 			throws CommunicationError {
-		
-		logger.debug("received a client connection");
 		
 		if (clientRecords.containsKey(clientId)) {
 			clientRecords.get(clientId).setLastContact(new Date());

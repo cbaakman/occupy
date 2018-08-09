@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.awt.image.BufferedImage;
@@ -55,12 +56,14 @@ import net.cbaakman.occupy.errors.RenderError;
 import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.font.Font;
 import net.cbaakman.occupy.font.FontFactory;
-import net.cbaakman.occupy.font.SVGStyle;
+import net.cbaakman.occupy.font.FontStyle;
+import net.cbaakman.occupy.game.GameMap;
 import net.cbaakman.occupy.load.LoadJob;
 import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.mesh.MeshFactory;
 import net.cbaakman.occupy.render.ClientGLEventListener;
 import net.cbaakman.occupy.render.LoadGLEventListener;
+import net.cbaakman.occupy.resource.Resource;
 import net.cbaakman.occupy.security.SSLChannel;
 
 public abstract class Client {
@@ -283,60 +286,26 @@ public abstract class Client {
 	}
 
 	protected void initClient() throws InitError {
+
+		if (config.getDataDir() == null)
+			throw new SeriousError("data dir not set in config");
+		if (!config.getDataDir().toFile().isDirectory()) {
+			logger.debug("making " + config.getDataDir());
+			config.getDataDir().toFile().mkdirs();
+		}
 		
 		Loader loader = new Loader(config.getLoadConcurrency());
 		
-		final Future<FontFactory> fFactory = loader.add(new LoadJob<FontFactory>() {
-
-			@Override
-			public FontFactory call() throws Exception {
-				InputStream is = Client.class.getResourceAsStream("/font/Lumean.svg");
-				try {
-					return FontFactory.parse(is);
-				}
-				finally {
-					is.close();
-				}
-			}
-		});
-		final Future<Font> fFont = loader.add(new LoadJob<Font>(){
-
-			@Override
-			public Font call() throws Exception {
-				return fFactory.get().generateFont(36, new SVGStyle());
-			}
-
-			@Override
-			public boolean isReady() {
-				return fFactory.isDone();
-			}
-		});
-		Future<BufferedImage> fInfantryImage = loader.add(new LoadJob<BufferedImage>(){
-
-			@Override
-			public BufferedImage call() throws Exception {
-				InputStream is = Client.class.getResourceAsStream("/image/infantry.png");
-				try {
-					return ImageIO.read(is);
-				}
-				finally {
-					is.close();
-				}
-			}
-		});
-		Future<MeshFactory> fInfantryMeshFactory = loader.add(new LoadJob<MeshFactory>() {
-
-			@Override
-			public MeshFactory call() throws Exception {
-				InputStream is = Client.class.getResourceAsStream("/mesh/infantry.xml");
-				try {
-					return MeshFactory.parse(is);
-				}
-				finally {
-					is.close();
-				}
-			}
-		});
+		final Future<FontFactory> fFactory = loader.add(Resource.getFontFactoryJob("lumean"));
+		
+		FontStyle fontStyle = new FontStyle();
+		fontStyle.setSize(36.0f);
+		fontStyle.setStrokeWidth(3.0f);
+		final Future<Font> fFont = loader.add(Resource.getFontJob(fFactory, fontStyle));
+		
+		Future<BufferedImage> fInfantryImage = loader.add(Resource.getImageJob("infantry"));
+		
+		Future<MeshFactory> fInfantryMeshFactory = loader.add(Resource.getMeshJob("infantry"));
 
 		GLProfile profile = GLProfile.get(GLProfile.GL3);
 		GLCapabilities capabilities = new GLCapabilities(profile);
@@ -360,6 +329,7 @@ public abstract class Client {
 				}
 			}
 		});
+		loader.setErrorQueue(getErrorQueue());
 		loader.start();
 
 		glCanvas.setSize(config.getScreenWidth(), config.getScreenHeight());
@@ -446,8 +416,11 @@ public abstract class Client {
 					disconnectFromServer();
 					
 					// TODO: show error screen
+					logger.error(e.getMessage(), e);
+					
 				} catch (InitError | RenderError e) {
 					// TODO: show error screen
+					logger.error(e.getMessage(), e);
 				}
 			}
 		} finally {  // always try to shut down tidily

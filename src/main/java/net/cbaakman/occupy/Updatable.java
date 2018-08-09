@@ -4,7 +4,6 @@ package net.cbaakman.occupy;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
-import net.cbaakman.occupy.communicate.Identifier;
 
 @Data
 public abstract class Updatable {

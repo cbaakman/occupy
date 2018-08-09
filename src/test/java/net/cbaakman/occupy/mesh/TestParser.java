@@ -18,7 +18,7 @@ public class TestParser {
 	public void testParseXML() throws IOException,
 									  ParserConfigurationException,
 									  SAXException, FormatError {
-		InputStream is = TestParser.class.getResourceAsStream("/mesh/infantry.xml");
+		InputStream is = TestParser.class.getResourceAsStream("/net/cbaakman/occupy/mesh/infantry.xml");
 		
 		try {
 			MeshFactory meshFactory = MeshFactory.parse(is);

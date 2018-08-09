@@ -10,6 +10,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 
 import lombok.Data;
+import net.cbaakman.occupy.errors.ErrorQueue;
 
 public class Loader {
 	
@@ -26,17 +27,27 @@ public class Loader {
 	}
 	
 	private List<LoadJobEntry> jobs = new ArrayList<LoadJobEntry>();
-	private Integer nJobsDone = 0;
-
-	public int countJobsLeft() {
-		synchronized(jobs) {
-			return jobs.size();
-		}
-	}
-	public int getJobsDone() {
+	private Integer nJobsDone = 0, nJobsError = 0;
+	
+	public LoadStats getStats() {
+		
+		LoadStats stats = new LoadStats();
 		synchronized(nJobsDone) {
-			return nJobsDone;
+			synchronized(jobs) {
+				synchronized(threads) {
+					stats.setWaiting(jobs.size());
+					stats.setDone(nJobsDone);
+					stats.setError(nJobsError);
+					
+					int count = 0;
+					for (LoaderThread t : threads)
+						if (t.isAlive())
+							count++;
+					stats.setRunning(count);
+				}
+			}
 		}
+		return stats;
 	}
 
 	private LoadJobEntry pickJobToRun() {
@@ -57,18 +68,25 @@ public class Loader {
 	public void runJob(LoadJobEntry entry) {
 		try {
 			entry.result = entry.job.call();
+
+			synchronized(nJobsDone) {
+				nJobsDone++;
+			}
 		} catch (Exception e) {
+			if (errorQueue != null)
+				errorQueue.pushError(e);
 			entry.error = e;
-		}
-		synchronized(nJobsDone) {
-			nJobsDone++;
+
+			synchronized(nJobsError) {
+				nJobsError++;
+			}
 		}
 	}
 	
 	private class LoaderThread extends Thread {
 		@Override
-		public void run() {			
-			while (countJobsLeft() > 0) {
+		public void run() {				
+			while (getStats().getWaiting() > 0) {
 				LoadJobEntry entry = pickJobToRun();
 				if (entry != null)
 					runJob(entry);
@@ -87,9 +105,13 @@ public class Loader {
 	}
 	
 	private Runnable runWhenDone = null;
+	private ErrorQueue errorQueue = null;
 
 	public void whenDone(Runnable runnable) {
 		this.runWhenDone = runnable;
+	}
+	public void setErrorQueue(ErrorQueue errorQueue) {
+		this.errorQueue = errorQueue;
 	}
 	
 	private List<LoaderThread> threads = new ArrayList<LoaderThread>();

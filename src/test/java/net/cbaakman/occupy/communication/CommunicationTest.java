@@ -130,9 +130,21 @@ public class CommunicationTest extends TestCase {
 	}
 
 	@Test
-	public void testLogin() throws AuthenticationError, CommunicationError {
+	public void testLoginSuccess() throws AuthenticationError, CommunicationError {
 		
 		client.login(loginCredentials);
+	}
+
+	@Test
+	public void testLoginFail() throws CommunicationError {
+		
+		try {
+			client.login(new Credentials("anything", "other"));
+			
+			fail();
+		} catch (AuthenticationError e) {
+			// This is supposed to happen.
+		}
 	}
 	
 	@Test

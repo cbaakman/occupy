@@ -1,14 +1,39 @@
 package net.cbaakman.occupy.font;
 
 import java.awt.Color;
+import java.util.Objects;
 
 import lombok.Data;
+import net.cbaakman.occupy.Identifier;
 
 @Data
-public class SVGStyle {
+public class FontStyle implements Identifier {
+	
+	private float size = 12.0f;
+	
 	private Color fillColor = new Color(1.0f, 1.0f, 1.0f, 1.0f),
 				  strokeColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
 	private float strokeWidth = 1.0f;
+	
+	@Override
+	public int hashCode() {
+		return Objects.hash(size, fillColor, strokeColor, strokeWidth);
+	}
+	
+	@Override
+	public boolean equals(Object other) {
+		if (other instanceof FontStyle)
+		{
+			FontStyle o = (FontStyle)other;
+			
+			return o.getSize()== size &&
+				   o.getFillColor().equals(fillColor) &&
+				   o.getStrokeColor().equals(strokeColor) &&
+				   o.getStrokeWidth() == strokeWidth;
+		}
+		else
+			return false;
+	}
 	
 	@Override
 	public String toString() {

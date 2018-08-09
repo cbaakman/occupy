@@ -17,6 +17,7 @@ import net.cbaakman.occupy.errors.ErrorQueue;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.ShaderCompileError;
 import net.cbaakman.occupy.errors.ShaderLinkError;
+import net.cbaakman.occupy.load.LoadStats;
 import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector2f;
 
@@ -159,12 +160,12 @@ public class LoadGLEventListener implements GLEventListener {
 	        
 	        gl3.glClear(GL3.GL_COLOR_BUFFER_BIT);
 	        GL3Error.check(gl3);		
+	        
+	        LoadStats loadStats = loader.getStats();
 			
-			int loadDone = loader.getJobsDone(),
-				loadTotal = loadDone + loader.countJobsLeft();
 	        float fractionLoaded = 0.0f;
-	        if (loadTotal > 0)
-	            fractionLoaded = ((float)loadDone) / loadTotal;
+	        if (loadStats.getTotal() > 0)
+	            fractionLoaded = ((float)loadStats.getDone()) / loadStats.getTotal();
 	        
 	        gl3.glDisable(GL3.GL_CULL_FACE);
 	        GL3Error.check(gl3);

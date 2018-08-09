@@ -270,11 +270,11 @@ public class FontFactory {
 		return null;
 	}
 	
-	public Font generateFont(float size, SVGStyle style) throws TranscoderException {
-		float multiply = size / unitsPerEM;
+	public Font generateFont(FontStyle style) throws TranscoderException {
+		float multiply = style.getSize() / unitsPerEM;
 		
 		Font font = new Font();
-		font.setSize(size);
+		font.setSize(style.getSize());
 		font.setBoundingBox(new BoundingBox(multiply * boundingBox.getLeft(),
 										    multiply * boundingBox.getBottom(),
 										    multiply * boundingBox.getRight(),
@@ -312,7 +312,7 @@ public class FontFactory {
 		return font;
 	}
 	
-	static private BufferedImage generateGlyphImage(BoundingBox bbox, float multiply, String d, SVGStyle style) throws TranscoderException {
+	static private BufferedImage generateGlyphImage(BoundingBox bbox, float multiply, String d, FontStyle style) throws TranscoderException {
 
 		BufferedImageTranscoder imageTranscoder = new BufferedImageTranscoder();
 		

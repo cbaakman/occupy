@@ -1,4 +1,4 @@
-package net.cbaakman.occupy.communicate;
+package net.cbaakman.occupy;
 
 public interface Identifier {
 

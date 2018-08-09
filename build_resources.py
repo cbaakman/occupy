@@ -74,14 +74,18 @@ gimp_exe = find_gimp()
 
 
 # Build directories if not present:
-mkdirs(os.path.join('src', 'main', 'resources', 'mesh'))
-mkdirs(os.path.join('src', 'main', 'resources', 'image'))
-mkdirs(os.path.join('src', 'test', 'resources', 'map'))
+resource_dir = os.path.join('src', 'main', 'resources', 'net', 'cbaakman', 'occupy')
+mesh_dir = os.path.join(resource_dir, 'mesh')
+image_dir = os.path.join(resource_dir, 'image')
+map_test_dir = os.path.join('src', 'test', 'resources', 'map')
+mkdirs(mesh_dir)
+mkdirs(image_dir)
+mkdirs(map_test_dir)
 
 
 # Build meshes:
-mesh_list = [(os.path.join('art', 'mesh', 'infantry.blend'), 'infantry', os.path.join('src', 'main', 'resources', 'mesh', 'infantry.xml')),
-             (os.path.join('art', 'mesh', 'terrain.blend'), 'terrain', os.path.join('src', 'test', 'resources', 'map', 'terrain.xml'))]
+mesh_list = [(os.path.join('art', 'mesh', 'infantry.blend'), 'infantry', os.path.join(mesh_dir, 'infantry.xml')),
+             (os.path.join('art', 'mesh', 'terrain.blend'), 'terrain', os.path.join(map_test_dir, 'terrain.xml'))]
 for blend_path, name, xml_path in mesh_list:
     r = subprocess.call([
         blender_exe, blend_path, '--background', '--python', xml_exporter,
@@ -95,26 +99,29 @@ for blend_path, name, xml_path in mesh_list:
 
 
 # Build images:
-image_list = [(os.path.join('art', 'image', 'infantry.xcf'), os.path.join('src', 'main', 'resources', 'mesh', 'infantry.png')),
-              (os.path.join('art', 'image', 'green.xcf'), os.path.join('src', 'test', 'resources', 'map', 'green.png'))]
+image_list = [(os.path.join('art', 'image', 'infantry.xcf'), 'base', os.path.join(image_dir, 'infantry.png')),
+              (os.path.join('art', 'image', 'infantry.xcf'), 'color', os.path.join(image_dir, 'infantry_color.png')),
+              (os.path.join('art', 'image', 'green.xcf'), 'base', os.path.join(map_test_dir, 'green.png'))]
 error_path = tempfile.mktemp()
 script_str = """
 import gimpfu
 import os
 import traceback
 
-def convert(xcf_path, png_path):
+def convert(xcf_path, layer_name, png_path):
     img = pdb.gimp_file_load(xcf_path, xcf_path)
-    layer = pdb.gimp_image_merge_visible_layers(img, gimpfu.CLIP_TO_IMAGE)
-    pdb.gimp_file_save(img, layer, png_path, png_path)
+    for layer in img.layers:
+        if layer.name == layer_name:
+            pdb.gimp_layer_resize(layer, img.width, img.height, 0, 0)
+            pdb.gimp_file_save(img, layer, png_path, png_path)
     pdb.gimp_image_delete(img)
     if not os.path.isfile(png_path):
         raise RuntimeError("%%s was not generated" %% png_path)
 
 
 try:
-    for xcf_path, png_path in %s:
-        convert(xcf_path, png_path)
+    for xcf_path, name, png_path in %s:
+        convert(xcf_path, name, png_path)
 except:
     traceback.print_exc(file=open('%s', 'w'))
 """ % (str(image_list), error_path)
@@ -126,13 +133,14 @@ subprocess.call([
 ])
 # Since gimpfu always exits with 0, we must set an error flag on a file:
 if os.path.isfile(error_path):
+    message = open(error_path, 'r').read()
     os.remove(error_path)
-    sys.exit(1)
+    raise Exception(message)
 
 # Store the map components in an archive:
-map_contents = [os.path.join('src', 'test', 'resources', 'map', 'terrain.xml'),
-                os.path.join('src', 'test', 'resources', 'map', 'green.png')]
-map_archive = os.path.join('src', 'test', 'resources', 'map', 'testmap.zip')
+map_contents = [os.path.join(map_test_dir, 'terrain.xml'),
+                os.path.join(map_test_dir, 'green.png')]
+map_archive = os.path.join(map_test_dir, 'testmap.zip')
 with ZipFile(map_archive, 'w') as z:
     for path in map_contents:
         z.write(path, os.path.basename(path))

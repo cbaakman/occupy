@@ -4,7 +4,7 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 
 import lombok.Data;
-import net.cbaakman.occupy.communicate.Identifier;
+import net.cbaakman.occupy.Identifier;
 
 @Data
 public class Address implements Identifier {
