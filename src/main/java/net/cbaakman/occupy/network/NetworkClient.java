@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
+import org.apache.log4j.Logger;
+
 import net.cbaakman.occupy.communicate.Client;
 import net.cbaakman.occupy.communicate.Connection;
 import net.cbaakman.occupy.communicate.Packet;
@@ -13,6 +15,8 @@ import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.SeriousError;
 
 public class NetworkClient extends Client {
+	
+	Logger logger = Logger.getLogger(NetworkClient.class);
 	
 	private UDPMessenger udpMessenger;
 	
@@ -24,7 +28,8 @@ public class NetworkClient extends Client {
 		udpMessenger = new UDPMessenger(getErrorQueue()) {
 			@Override
 			void onReceive(Address address, Packet message) {
-				if (!address.getAddress().equals(config.getServerAddress()))
+				
+				if (!address.equals(config.getServerAddress()))
 					return;
 
 				NetworkClient.this.onPacket(message);

@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ import java.security.InvalidKeyException;
 
 import javax.imageio.ImageIO;
 
+import net.cbaakman.occupy.Identifier;
 import net.cbaakman.occupy.Updatable;
 import net.cbaakman.occupy.Update;
 import net.cbaakman.occupy.annotations.ClientToServer;
@@ -73,7 +75,7 @@ public abstract class Client {
 	private JFrame frame;
 	private GLCanvas glCanvas;
 	private ErrorQueue errorQueue = new ErrorQueue();
-	private boolean running;
+	private boolean running, connectedToServer = false;
 	
 	private Map<UUID, Updatable> updatables = new HashMap<UUID, Updatable>();
 	
@@ -105,7 +107,7 @@ public abstract class Client {
 	protected abstract Connection connectToServer() throws CommunicationError;
 
 	protected void onPacket(Packet message) throws SeriousError {
-		
+				
 		if (!connectedToServer())
 			return;
 		
@@ -220,6 +222,7 @@ public abstract class Client {
 			
 			if (response.equals(ResponseType.OK)) {
 				// Authentication OK
+				connectedToServer = true;
 				return;
 			}
 			else if (response.equals(ResponseType.AUTHENTICATION_ERROR))
@@ -255,12 +258,12 @@ public abstract class Client {
 					updatables.put(update.getObjectID(), updatable);
 				}
 			} catch (InstantiationException | IllegalAccessException e) {
-				throw new SeriousError(e);
+				errorQueue.pushError(e);
 			}
 		}
 		
 		try {
-			Field field = update.getObjectClass().getField(update.getFieldID());
+			Field field = updatable.getDeclaredFieldSinceUpdatable(update.getFieldID());
 			
 			if (field.isAnnotationPresent(ServerToClient.class)) {
 			
@@ -270,7 +273,7 @@ public abstract class Client {
 			
 		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException |
 				IllegalAccessException e) {
-			throw new SeriousError(e);
+			errorQueue.pushError(e);
 		}
 	}
 	
@@ -446,11 +449,12 @@ public abstract class Client {
 	}
 	
 	public boolean connectedToServer() {
-		// TODO
-		return false;
+		return connectedToServer;
 	}
 	
 	public void disconnectFromServer() {
+		connectedToServer = false;
+		
     	try {
 			sendPacket(new Packet(PacketType.LOGOUT, null));
 		} catch (CommunicationError e) {

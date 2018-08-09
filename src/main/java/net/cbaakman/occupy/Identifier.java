@@ -1,6 +1,8 @@
 package net.cbaakman.occupy;
 
-public interface Identifier {
+import java.io.Serializable;
+
+public interface Identifier extends Serializable {
 
 	@Override
 	public int hashCode();

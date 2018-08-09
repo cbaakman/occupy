@@ -10,10 +10,14 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.net.InetAddress;
 import java.nio.file.Files;
 import java.security.InvalidKeyException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
@@ -26,6 +30,7 @@ import lombok.Data;
 import lombok.Setter;
 import lombok.AccessLevel;
 import net.cbaakman.occupy.Identifier;
+import net.cbaakman.occupy.UUIDIdentifier;
 import net.cbaakman.occupy.Updatable;
 import net.cbaakman.occupy.Update;
 import net.cbaakman.occupy.annotations.ClientToServer;
@@ -43,6 +48,7 @@ import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.RenderError;
 import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.game.GameMap;
+import net.cbaakman.occupy.network.Address;
 import net.cbaakman.occupy.security.SSLChannel;
 import org.apache.log4j.Logger;
 import org.apache.maven.model.Model;
@@ -73,6 +79,7 @@ public abstract class Server {
 	private Map<Identifier, ClientRecord> clientRecords = new HashMap<Identifier, ClientRecord>();
 	
 	protected ServerConfig config;
+	private Identifier serverId = new UUIDIdentifier(UUID.randomUUID());
 	
 	public Server(ServerConfig config) {
 		this.config = config;
@@ -92,23 +99,7 @@ public abstract class Server {
 	public ServerInfo getInfo() {
 		ServerInfo info = new ServerInfo();
 		
-		FileInputStream mis;
-		try {
-			mis = new FileInputStream(getMapFile());
-		} catch (FileNotFoundException e) {
-			throw new SeriousError(e);
-		}
-		try {
-			info.setMapHash(GameMap.getFileHash(mis));
-		} catch (IOException e) {
-			throw new SeriousError(e);
-		} finally {
-			try {
-				mis.close();
-			} catch (IOException e) {
-				throw new SeriousError(e);
-			}
-		}
+		info.setServerId(serverId);
 		
 		info.setServerVersion(getVersion());
 		
@@ -264,9 +255,7 @@ public abstract class Server {
 	}
 	
 	protected void onPacket(Identifier clientId, Packet packet) throws SeriousError {
-		
-		logger.debug("received a client packet");
-		
+				
 		if (clientRecords.containsKey(clientId)) {
 			
 			clientRecords.get(clientId).setLastContact(new Date());
@@ -311,7 +300,7 @@ public abstract class Server {
 	
 	protected abstract void sendPacket(Identifier clientId, Packet packet) throws CommunicationError;
 	
-	protected void update(float dt) throws CommunicationError {
+	private void update(float dt) throws CommunicationError {
 		
 		// timeout clients
 		synchronized (clientRecords) {
@@ -332,6 +321,7 @@ public abstract class Server {
 		
 		synchronized(clientRecords) {
 			for (ClientRecord clientRecord : clientRecords.values()) {
+				
 				synchronized(updatables) {
 					for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
 						UUID objectId = entry.getKey();
@@ -339,19 +329,17 @@ public abstract class Server {
 						
 						Class<? extends Updatable> objectClass = updatable.getClass();
 						
-						for (Field field : objectClass.getDeclaredFields()) {
+						for (Field field : updatable.getDeclaredFieldsSinceUpdatable()) {
 							
 							if (field.isAnnotationPresent(ServerToClient.class) ||
 								field.isAnnotationPresent(ClientToServer.class) &&
 								!clientRecord.getClientId().equals(updatable.getOwnerId())) {
-								
+
 								field.setAccessible(true);
 						
 								try {
 									Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
 
-									logger.debug(String.format("sending update packet to %s", clientRecord.getClientId()));
-									
 									sendPacket(clientRecord.getClientId(), new Packet(PacketType.UPDATE, update));
 									
 								} catch (IllegalArgumentException | IllegalAccessException e) {
@@ -374,5 +362,14 @@ public abstract class Server {
 	
 	public ErrorQueue getErrorQueue() {
 		return errorQueue;
+	}
+	
+	public <T extends Updatable> void addUpdatable(T updatable) {
+		
+		updatable.setOwnerId(serverId);
+		
+		synchronized(updatables) {
+			updatables.put(UUID.randomUUID(), updatable);
+		}
 	}
 }

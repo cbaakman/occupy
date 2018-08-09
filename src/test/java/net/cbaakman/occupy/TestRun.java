@@ -5,17 +5,28 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Random;
 
+import net.cbaakman.occupy.authenticate.Authenticator;
+import net.cbaakman.occupy.authenticate.Credentials;
 import net.cbaakman.occupy.communicate.Client;
 import net.cbaakman.occupy.communicate.Server;
 import net.cbaakman.occupy.config.ClientConfig;
 import net.cbaakman.occupy.config.ServerConfig;
+import net.cbaakman.occupy.errors.AuthenticationError;
+import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.InitError;
+import net.cbaakman.occupy.game.Infantry;
+import net.cbaakman.occupy.game.MoveOrder;
+import net.cbaakman.occupy.game.Unit;
+import net.cbaakman.occupy.math.Vector3f;
 import net.cbaakman.occupy.network.Address;
 import net.cbaakman.occupy.network.NetworkClient;
 import net.cbaakman.occupy.network.NetworkServer;
 
 public class TestRun {
+	
+	private static Credentials loginCredentials = new Credentials("user", "pass");
 	
 	private static Path createDataDirectory(String prefix) throws IOException{
 		return Files.createTempDirectory(prefix);
@@ -40,17 +51,53 @@ public class TestRun {
 		};
 		serverThread.start();
 		
+		Thread clientThread = new Thread("client") {
+			public void run() {
+				try {
+					client.run();
+				} catch (Exception e) {
+					e.printStackTrace();
+				} finally {  // When the client stops, the server stops.
+					server.stop();
+				}
+			}
+		};
+		clientThread.start();
+		
+		// Log in after 1 second, allow the server to initialize.
 		try {
-			client.run();
-		} catch (Exception e) {
-
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			client.login(loginCredentials);
+		} catch (AuthenticationError | CommunicationError e) {
+			
 			client.stop();
 			server.stop();
 			
 			e.printStackTrace();
 		}
 		
-		server.stop();
+		// Place some random units
+		int i;
+		float minX = -100.0f, maxX = 100.0f,
+			  minZ = -100.0f, maxZ = 100.0f,
+			  x, z;
+		Random random = new Random();
+		for (i = 0; i < 100; i++) {
+			Unit unit = new Infantry();
+			x = minX + random.nextFloat() * (maxX - minX);
+			z = minZ + random.nextFloat() * (maxZ - minZ);
+			unit.setPosition(new Vector3f(x, 0.0f, z));
+			x = minX + random.nextFloat() * (maxX - minX);
+			z = minZ + random.nextFloat() * (maxZ - minZ);
+			unit.setCurrentOrder(new MoveOrder(new Vector3f(x, 0.0f, z)));
+			
+			server.addUpdatable(unit);
+		}
 	}
 	
 	private static void removeTree(Path path) {
@@ -79,6 +126,8 @@ public class TestRun {
 			serverConfig.setDataDir(createDataDirectory("server"));
 			File mapFile = new File(serverConfig.getDataDir().toFile(), "map.zip");
 			Files.copy(TestRun.class.getResourceAsStream("/map/testmap.zip"), mapFile.toPath());
+			File passwdFile = new File(serverConfig.getDataDir().toFile(), "passwd");
+			(new Authenticator(passwdFile)).add(loginCredentials);
 			
 			clientConfig.setServerAddress(new Address(InetAddress.getLoopbackAddress(), serverPort));
 			clientConfig.setDataDir(createDataDirectory("client"));

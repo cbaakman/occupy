@@ -1,11 +1,13 @@
 package net.cbaakman.occupy.math;
 
+import java.io.Serializable;
+
 import com.jogamp.opengl.math.FloatUtil;
 
 import lombok.Data;
 
 @Data
-public class Vector3f implements Comparable<Vector3f> {
+public class Vector3f implements Comparable<Vector3f>, Serializable {
 	
 	private float x, y, z;
 	
