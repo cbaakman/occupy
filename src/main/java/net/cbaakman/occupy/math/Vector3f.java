@@ -39,6 +39,21 @@ public class Vector3f implements Comparable<Vector3f>, Serializable {
 		this.z = z;
 	}
 	public Vector3f() {
+		this.x = 0.0f;
+		this.y = 0.0f;
+		this.z = 0.0f;
+	}
+	
+	public void move(Vector3f v) {
+		this.x += v.getX();
+		this.y += v.getY();
+		this.z += v.getZ();
+	}
+
+	public void move(float[] v) {
+		this.x += v[0];
+		this.y += v[1];
+		this.z += v[2];
 	}
 
 	public Vector3f add(Vector3f o) {
@@ -49,11 +64,11 @@ public class Vector3f implements Comparable<Vector3f>, Serializable {
 		return new Vector3f(x - o.x, y - o.y, z - o.z);
 	}
 
-	public Vector3f divide(float f) {
+	public Vector3f divideBy(float f) {
 		return new Vector3f(x / f, y / f, z / f);
 	}
 
-	public Vector3f multiply(float f) {
+	public Vector3f multiplyBy(float f) {
 		return new Vector3f(x * f, y * f, z * f);
 	}
 
@@ -74,5 +89,21 @@ public class Vector3f implements Comparable<Vector3f>, Serializable {
 	@Override
 	public String toString() {
 		return String.format("(%f %f %f)", x, y, z);
+	}
+
+	public Vector3f unit() {
+		return this.divideBy(this.length());
+	}
+
+	public float length() {
+		return (float)Math.sqrt(x*x + y*y + z*z);
+	}
+
+	public float length2() {
+		return x*x + y*y + z*z;
+	}
+
+	public float[] toList() {
+		return new float[] {x, y, z};
 	}
 }

@@ -16,6 +16,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -36,6 +37,8 @@ import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.math.Quaternion;
+
 import java.security.InvalidKeyException;
 
 import javax.imageio.ImageIO;
@@ -59,11 +62,15 @@ import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.font.Font;
 import net.cbaakman.occupy.font.FontFactory;
 import net.cbaakman.occupy.font.FontStyle;
-import net.cbaakman.occupy.game.GameMap;
-import net.cbaakman.occupy.load.LoadJob;
+import net.cbaakman.occupy.game.Camera;
+import net.cbaakman.occupy.game.PlayerRecord;
+import net.cbaakman.occupy.input.MemoryKeyListener;
+import net.cbaakman.occupy.input.UserInput;
 import net.cbaakman.occupy.load.Loader;
+import net.cbaakman.occupy.math.Vector3f;
 import net.cbaakman.occupy.mesh.MeshFactory;
 import net.cbaakman.occupy.render.ClientGLEventListener;
+import net.cbaakman.occupy.render.InGameGLEventListener;
 import net.cbaakman.occupy.render.LoadGLEventListener;
 import net.cbaakman.occupy.resource.Resource;
 import net.cbaakman.occupy.security.SSLChannel;
@@ -72,10 +79,14 @@ public abstract class Client {
 	
 	static Logger logger = Logger.getLogger(Client.class);
 	
+	private Camera camera = new Camera();
+	private UserInput userInput = new UserInput(this);
 	private JFrame frame;
 	private GLCanvas glCanvas;
 	private ErrorQueue errorQueue = new ErrorQueue();
-	private boolean running, connectedToServer = false;
+	private boolean running;
+	
+	private PlayerRecord playerRecord = null;
 	
 	private Map<UUID, Updatable> updatables = new HashMap<UUID, Updatable>();
 	
@@ -96,67 +107,29 @@ public abstract class Client {
 		return model.getVersion();
 	}
 	
-	public File getMapFile(String name) {
-		if (config.getDataDir() == null)
-			throw new SeriousError("data dir not set in config");
-		
-		return new File(config.getDataDir().toFile(), String.format("map-%s.zip", name));
-	}
-	
 	public abstract void sendPacket(Packet packet) throws CommunicationError;
 	protected abstract Connection connectToServer() throws CommunicationError;
 
-	protected void onPacket(Packet message) throws SeriousError {
+	protected void onPacket(Packet packet) throws SeriousError {
 				
 		if (!connectedToServer())
 			return;
 		
-		if (message.getType().equals(PacketType.UPDATE)) {
-			processUpdateFromServer((Update)message.getData());
+		if (packet.getType().equals(PacketType.UPDATE)) {
+			processUpdateFromServer((Update)packet.getData());
 		}
-		else if (message.getType().equals(PacketType.LOGOUT)) {
+		else if (packet.getType().equals(PacketType.LOGOUT)) {
 			disconnectFromServer();
 		}
-	}
-	
-	public void downloadMap(String saveAsName) throws CommunicationError, IOException {
-		Connection connection = connectToServer();
-		
-		InputStream mapInputStream;
-
-		try {
-			// Tell the server that we want this map:
-			ObjectOutputStream oos = new ObjectOutputStream(connection.getOutputStream());
-			oos.writeObject(RequestType.DOWNLOAD_MAP);
-			oos.flush();
-			
-			// Read the server's response:
-			ObjectInputStream ois = new ObjectInputStream(connection.getInputStream());
-			ResponseType response = (ResponseType)ois.readObject();	
-			
-			if (response.equals(ResponseType.OK)) {
-				
-				// Assume the rest of the data is the map file:
-				mapInputStream = connection.getInputStream();
-			}
-			else
-				throw new CommunicationError(String.format("unexpected response from server: %s", response.name()));
-
-		} catch (ClassNotFoundException | IOException e) {
-			connection.close();
-			throw new CommunicationError(e);
-		}
-		
-		// Download map:
-		try {
-			Files.copy(mapInputStream, getMapFile(saveAsName).toPath());
-		}
-		finally {
-			// Always try to close the connection to the server.
-			try {
-				connection.close();
-			} catch (IOException e) {
-				throw new CommunicationError(e);
+		else if (packet.getType().equals(PacketType.PING)) {
+			int bounce = (Integer)packet.getData();
+			if (bounce > 0) {
+				bounce--;
+				try {
+					sendPacket(new Packet(PacketType.PING, bounce));
+				} catch (CommunicationError e) {
+					logger.error(e.getMessage(), e);
+				}
 			}
 		}
 	}
@@ -222,7 +195,7 @@ public abstract class Client {
 			
 			if (response.equals(ResponseType.OK)) {
 				// Authentication OK
-				connectedToServer = true;
+				playerRecord = new PlayerRecord(credentials.getUsername());
 				return;
 			}
 			else if (response.equals(ResponseType.AUTHENTICATION_ERROR))
@@ -265,7 +238,9 @@ public abstract class Client {
 		try {
 			Field field = updatable.getDeclaredFieldSinceUpdatable(update.getFieldID());
 			
-			if (field.isAnnotationPresent(ServerToClient.class)) {
+			if (field.isAnnotationPresent(ServerToClient.class) ||
+					field.isAnnotationPresent(ClientToServer.class) &&
+					!updatable.mayBeUpdatedBy(playerRecord)) {
 			
 				field.setAccessible(true);
 				field.set(updatable, update.getValue());
@@ -322,8 +297,10 @@ public abstract class Client {
 				glCanvas.removeGLEventListener(listener0);
 				
 				try {
-					glCanvas.addGLEventListener(new ClientGLEventListener(Client.this, 
-																		  fFont.get(),
+					camera.setPosition(new Vector3f(0.0f, 100.0f, 100.0f));
+					camera.setOrientation(new Quaternion().rotateByAngleX((float)Math.toRadians(-45.0)));
+					
+					glCanvas.addGLEventListener(new InGameGLEventListener(Client.this,
 																		  fInfantryMeshFactory.get(),
 																		  fInfantryImage.get()));
 				} catch (InterruptedException | ExecutionException e) {
@@ -338,11 +315,10 @@ public abstract class Client {
 		glCanvas.setSize(config.getScreenWidth(), config.getScreenHeight());
 		
 		glCanvas.addGLEventListener(new LoadGLEventListener(loader, this));
-		
-		logger.debug(String.format("screen width: %d, screen height: %d",
-								   glCanvas.getWidth(), glCanvas.getHeight()));
 
 		frame = new JFrame();
+		glCanvas.addKeyListener(userInput);
+		glCanvas.addMouseWheelListener(userInput);
 		frame.getContentPane().add(glCanvas);
 		frame.addWindowListener(new WindowAdapter() {
             @Override
@@ -355,38 +331,46 @@ public abstract class Client {
         frame.pack();
         frame.setVisible(true);
         frame.setResizable(false);
+        glCanvas.setFocusable(true);
         centerFrame(frame);
         
         glCanvas.requestFocusInWindow();
 	}
 	
 	protected void update(float dt) throws CommunicationError, RenderError, InitError {
-		synchronized (updatables) {
-			for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
-				entry.getValue().updateOnClient(dt);
-			}
-		}
-		synchronized(updatables) {
-			for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
-				UUID objectId = entry.getKey();
-				Updatable updatable = entry.getValue();
-				
-				Class<? extends Updatable> objectClass = updatable.getClass();
-				
-				for (Field field : objectClass.getDeclaredFields()) {
-					
-					if (field.isAnnotationPresent(ClientToServer.class)) {
-						
-						field.setAccessible(true);
-				
-						try {
-							Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
 
-							sendPacket(new Packet(PacketType.UPDATE, update));
+		userInput.update(dt);
+		
+		if (playerRecord != null) {
+			synchronized (updatables) {
+				for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
+					entry.getValue().updateOnClient(dt);
+				}
+			}
+			
+			synchronized(updatables) {
+				for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
+					UUID objectId = entry.getKey();
+					Updatable updatable = entry.getValue();
+					
+					Class<? extends Updatable> objectClass = updatable.getClass();
+					
+					for (Field field : objectClass.getDeclaredFields()) {
+						
+						if (field.isAnnotationPresent(ClientToServer.class)
+								&& updatable.mayBeUpdatedBy(playerRecord)) {
 							
-						} catch (IllegalArgumentException | IllegalAccessException e) {
-							// Must not happen!
-							throw new SeriousError(e);
+							field.setAccessible(true);
+					
+							try {
+								Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
+	
+								sendPacket(new Packet(PacketType.UPDATE, update));
+								
+							} catch (IllegalArgumentException | IllegalAccessException e) {
+								// Must not happen!
+								throw new SeriousError(e);
+							}
 						}
 					}
 				}
@@ -412,6 +396,7 @@ public abstract class Client {
 			while (running) {				
 				ticks = System.currentTimeMillis();
 				dt = (float)(ticks - ticks0) / 1000;
+				ticks0 = ticks;
 	
 				try {
 					update(dt);
@@ -449,11 +434,11 @@ public abstract class Client {
 	}
 	
 	public boolean connectedToServer() {
-		return connectedToServer;
+		return playerRecord != null;
 	}
 	
 	public void disconnectFromServer() {
-		connectedToServer = false;
+		playerRecord = null;
 		
     	try {
 			sendPacket(new Packet(PacketType.LOGOUT, null));
@@ -466,5 +451,17 @@ public abstract class Client {
 
 	public ErrorQueue getErrorQueue() {
 		return errorQueue;
+	}
+
+	public Collection<Updatable> getUpdatables() {
+		return updatables.values();
+	}
+
+	public Camera getCamera() {
+		return camera;
+	}
+
+	public ClientConfig getConfig() {
+		return config;
 	}
 }

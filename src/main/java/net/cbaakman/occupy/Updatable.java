@@ -9,19 +9,18 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
+import net.cbaakman.occupy.game.PlayerRecord;
 
 @Data
 public abstract class Updatable {
 	
-	private Identifier ownerId;
-	
-	protected Updatable() {
-		this.ownerId = null;
-	}
-	
 	public void updateOnClient(final float dt) {
 	}
 	public void updateOnServer(final float dt) {
+	}
+	
+	public boolean mayBeUpdatedBy(PlayerRecord player) {
+		return false;
 	}
 	
 	public List<Field> getDeclaredFieldsSinceUpdatable() {

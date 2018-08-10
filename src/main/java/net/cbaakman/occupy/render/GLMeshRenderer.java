@@ -139,7 +139,7 @@ public class GLMeshRenderer {
 				Vector3f averageNormal = new Vector3f(0.0f, 0.0f, 0.0f);
 				for (int i = 0; i < vertices.length; i++)
 					averageNormal = averageNormal.add(vertices[i].getNormal());
-				averageNormal = averageNormal.divide(vertices.length);
+				averageNormal = averageNormal.divideBy(vertices.length);
 				
 				for (int i = 0; i < vertices.length; i++)
 					vertices[i].setNormal(averageNormal);

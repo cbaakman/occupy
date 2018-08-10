@@ -12,4 +12,9 @@ public class AttackOrder extends Order {
 	public AttackOrder(UUID targetId) {
 		this.targetId = targetId;
 	}
+	
+	@Override
+	public String toString() {
+		return String.format("attack %s", targetId.toString());
+	}
 }

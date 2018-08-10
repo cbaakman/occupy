@@ -153,12 +153,4 @@ public class CommunicationTest extends TestCase {
 		ServerInfo serverInfo = client.getServerInfo();
 		assertEquals(serverInfo.getServerVersion(), client.getVersion());
 	}
-	
-	@Test
-	public void testDownloadMap() throws CommunicationError, IOException {
-		client.downloadMap("test");
-		
-		File mapFile = client.getMapFile("test");
-		assertTrue(mapFile.isFile());
-	}
 }

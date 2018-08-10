@@ -11,4 +11,9 @@ public class MoveOrder extends Order {
 	public MoveOrder(Vector3f destination) {
 		this.destination = destination;
 	}
+	
+	@Override
+	public String toString() {
+		return String.format("move to %s", destination.toString());
+	}
 }

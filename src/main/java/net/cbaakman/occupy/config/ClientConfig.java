@@ -1,5 +1,6 @@
 package net.cbaakman.occupy.config;
 
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.net.InetAddress;
 import java.nio.file.Path;
@@ -19,4 +20,9 @@ public class ClientConfig {
 	private int loadConcurrency = 10;
 
 	private Path dataDir = null;
+	
+	private int keyCameraLeft = KeyEvent.VK_A,
+			    keyCameraRight = KeyEvent.VK_D,
+			    keyCameraForward = KeyEvent.VK_W,
+			    keyCameraBack = KeyEvent.VK_S;
 }

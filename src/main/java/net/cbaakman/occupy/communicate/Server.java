@@ -47,7 +47,7 @@ import net.cbaakman.occupy.errors.ErrorQueue;
 import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.RenderError;
 import net.cbaakman.occupy.errors.SeriousError;
-import net.cbaakman.occupy.game.GameMap;
+import net.cbaakman.occupy.game.PlayerRecord;
 import net.cbaakman.occupy.network.Address;
 import net.cbaakman.occupy.security.SSLChannel;
 import org.apache.log4j.Logger;
@@ -64,14 +64,13 @@ public abstract class Server {
 	
 	@Data
 	private class ClientRecord {
-		
-		@Setter(AccessLevel.NONE)
-		private Identifier clientId;
+		private PlayerRecord playerRecord;
 		
 		private Date lastContact = new Date();
 		
-		public ClientRecord(Identifier id) {
-			this.clientId = id;
+		public ClientRecord(String username) {
+			// TODO: lookup player record on disk
+			this.playerRecord = new PlayerRecord(username);
 		}
 	}
 	
@@ -119,6 +118,7 @@ public abstract class Server {
 			while (running) {
 				ticks = System.currentTimeMillis();
 				dt = (float)(ticks - ticks0) / 1000;
+				ticks0 = ticks;
 				
 				try {
 					update(dt);
@@ -164,10 +164,6 @@ public abstract class Server {
 				writeResponse(ResponseType.OK, connection);
 				sendInfo(connection);
 			}
-			else if (request.equals(RequestType.DOWNLOAD_MAP)) {
-				writeResponse(ResponseType.OK, connection);
-				sendMap(connection);
-			}
 		} catch (ClassNotFoundException | InvalidKeyException | NoSuchPaddingException |
 				 IllegalBlockSizeException | BadPaddingException e) {
 			
@@ -184,20 +180,6 @@ public abstract class Server {
 		ObjectOutputStream oos = new ObjectOutputStream(connection.getOutputStream());
 		oos.writeObject(info);
 		oos.flush();
-	}
-	
-	private void sendMap(Connection connection) throws IOException {
-		
-		OutputStream os = connection.getOutputStream();
-		Files.copy(getMapFile().toPath(), os);
-		os.flush();
-	}
-	
-	private File getMapFile() {
-		if (config.getDataDir() == null)
-			throw new SeriousError("no data dir set in config");
-		
-		return new File(config.getDataDir().toFile(), "map.zip");
 	}
 	
 	private File getPasswordFile() {
@@ -243,7 +225,7 @@ public abstract class Server {
 		}
 		
 		synchronized(clientRecords) {
-			clientRecords.put(clientId, new ClientRecord(clientId));
+			clientRecords.put(clientId, new ClientRecord(credentials.getUsername()));
 		}
 	}
 	
@@ -266,6 +248,17 @@ public abstract class Server {
 			else if (packet.getType().equals(PacketType.LOGOUT)) {	
 				logoutClient(clientId);
 			}
+			else if (packet.getType().equals(PacketType.PING)) {
+				int bounce = (Integer)packet.getData();
+				if (bounce > 0) {
+					bounce--;
+					try {
+						sendPacket(clientId, new Packet(PacketType.PING, bounce));
+					} catch (CommunicationError e) {
+						logger.error(e.getMessage(), e);
+					}
+				}
+			}
 		}
 	}
 
@@ -278,9 +271,6 @@ public abstract class Server {
 		}
 			
 		if (updatable == null)
-			return;
-		
-		if (!updatable.getOwnerId().equals(clientId))
 			return;
 		
 		try {
@@ -301,14 +291,14 @@ public abstract class Server {
 	protected abstract void sendPacket(Identifier clientId, Packet packet) throws CommunicationError;
 	
 	private void update(float dt) throws CommunicationError {
-		
+				
 		// timeout clients
 		synchronized (clientRecords) {
 			Date now = new Date();
 			for (Entry<Identifier, ClientRecord> entry : clientRecords.entrySet()) {
 				ClientRecord clientRecord = entry.getValue();
 				if ((now.getTime() - clientRecord.getLastContact().getTime()) > config.getContactTimeoutMS()) {
-					clientRecords.remove(clientRecord.getClientId());
+					clientRecords.remove(entry.getKey());
 				}
 			}
 		}
@@ -320,7 +310,12 @@ public abstract class Server {
 		}
 		
 		synchronized(clientRecords) {
-			for (ClientRecord clientRecord : clientRecords.values()) {
+			for (Entry<Identifier, ClientRecord> ent : clientRecords.entrySet()) {
+				ClientRecord clientRecord = ent.getValue();
+				Identifier clientId = ent.getKey();
+				
+				// Ping to maintain contact:
+				sendPacket(clientId, new Packet(PacketType.PING, 1));
 				
 				synchronized(updatables) {
 					for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
@@ -332,15 +327,15 @@ public abstract class Server {
 						for (Field field : updatable.getDeclaredFieldsSinceUpdatable()) {
 							
 							if (field.isAnnotationPresent(ServerToClient.class) ||
-								field.isAnnotationPresent(ClientToServer.class) &&
-								!clientRecord.getClientId().equals(updatable.getOwnerId())) {
+								field.isAnnotationPresent(ClientToServer.class) && 
+								!updatable.mayBeUpdatedBy(clientRecord.getPlayerRecord())) {
 
 								field.setAccessible(true);
-						
+								
 								try {
 									Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
 
-									sendPacket(clientRecord.getClientId(), new Packet(PacketType.UPDATE, update));
+									sendPacket(clientId, new Packet(PacketType.UPDATE, update));
 									
 								} catch (IllegalArgumentException | IllegalAccessException e) {
 									throw new SeriousError(e);
@@ -365,9 +360,6 @@ public abstract class Server {
 	}
 	
 	public <T extends Updatable> void addUpdatable(T updatable) {
-		
-		updatable.setOwnerId(serverId);
-		
 		synchronized(updatables) {
 			updatables.put(UUID.randomUUID(), updatable);
 		}

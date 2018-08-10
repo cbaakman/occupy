@@ -129,8 +129,8 @@ public class MeshFactory {
 		Quaternion rotation = new Quaternion();
 		rotation.setSlerp(keyPrev.getRotation(), keyNext.getRotation(), fPrev);
 		
-		Vector3f translation = keyPrev.getTranslation().multiply(fNext)
-						  .add(keyNext.getTranslation().multiply(fPrev));
+		Vector3f translation = keyPrev.getTranslation().multiplyBy(fNext)
+						  .add(keyNext.getTranslation().multiplyBy(fPrev));
 		
 		return new BoneTransformation(rotation, translation);
 	}
@@ -215,8 +215,8 @@ public class MeshFactory {
 	private MeshVertex getMultipliedBy(MeshVertex v, float f) {
 		
 		MeshVertex r = v.copy();
-		r.setPosition(v.getPosition().multiply(f));
-		r.setNormal(v.getNormal().multiply(f));
+		r.setPosition(v.getPosition().multiplyBy(f));
+		r.setNormal(v.getNormal().multiplyBy(f));
 		
 		return r;
 	}
@@ -224,8 +224,8 @@ public class MeshFactory {
 	private static MeshVertex getDividedBy(MeshVertex v, float f) {
 		
 		MeshVertex r = v.copy();
-		r.setPosition(v.getPosition().divide(f));
-		r.setNormal(v.getNormal().divide(f));
+		r.setPosition(v.getPosition().divideBy(f));
+		r.setNormal(v.getNormal().divideBy(f));
 		
 		return r;
 	}
