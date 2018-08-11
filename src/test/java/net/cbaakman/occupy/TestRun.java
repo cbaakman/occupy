@@ -88,7 +88,7 @@ public class TestRun {
 			  x, z;
 		Random random = new Random();
 		for (i = 0; i < 100; i++) {
-			Unit unit = new Infantry();
+			Unit unit = new Infantry(server);
 			x = minX + random.nextFloat() * (maxX - minX);
 			z = minZ + random.nextFloat() * (maxZ - minZ);
 			unit.setPosition(new Vector3f(x, 0.0f, z));

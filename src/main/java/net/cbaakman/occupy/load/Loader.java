@@ -16,14 +16,38 @@ public class Loader {
 	
 	static Logger logger = Logger.getLogger(Loader.class);
 	
-	@Data
 	private class LoadJobEntry {
 		public LoadJobEntry(LoadJob<? extends Object> job) {
 			this.job = job;
 		}
 		private LoadJob<? extends Object> job;
+		
 		private Object result = null;
 		private Exception error = null;
+		
+		public synchronized LoadJob<? extends Object> getJob() {
+			return job;
+		}
+		
+		public synchronized void setJob(LoadJob<? extends Object> j) {
+			job = j;
+		}
+		
+		public synchronized Object getResult() {
+			return result;
+		}
+		
+		public synchronized void setResult(Object r) {
+			result = r;
+		}
+		
+		public synchronized Exception getError() {
+			return error;
+		}
+		
+		public synchronized void setError(Exception e) {
+			error = e;
+		}
 	}
 	
 	private List<LoadJobEntry> jobs = new ArrayList<LoadJobEntry>();
@@ -67,7 +91,7 @@ public class Loader {
 	
 	public void runJob(LoadJobEntry entry) {
 		try {
-			entry.result = entry.job.call();
+			entry.setResult(entry.getJob().call());
 
 			synchronized(nJobsDone) {
 				nJobsDone++;
@@ -75,7 +99,7 @@ public class Loader {
 		} catch (Exception e) {
 			if (errorQueue != null)
 				errorQueue.pushError(e);
-			entry.error = e;
+			entry.setError(e);
 
 			synchronized(nJobsError) {
 				nJobsError++;

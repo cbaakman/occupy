@@ -11,10 +11,12 @@ import net.cbaakman.occupy.Identifier;
 import net.cbaakman.occupy.Updatable;
 import net.cbaakman.occupy.annotations.ClientToServer;
 import net.cbaakman.occupy.annotations.ServerToClient;
+import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.communicate.Server;
 import net.cbaakman.occupy.math.Vector3f;
 
 @Data
-public abstract class Unit extends Updatable {
+public abstract class Unit extends Entity {
 	
 	Logger logger = Logger.getLogger(Unit.class);
 
@@ -35,5 +37,13 @@ public abstract class Unit extends Updatable {
 	@Override
 	public boolean mayBeUpdatedBy(PlayerRecord player) {		
 		return player.getName().equals(ownerName);
+	}
+
+	public Unit(Server server) {
+		super(server);
+	}
+
+	public Unit(Client client) {
+		super(client);
 	}
 }

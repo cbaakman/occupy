@@ -42,97 +42,18 @@ public class MeshFactory {
 		private List<MeshFace> faces = new ArrayList<MeshFace>();
 	}
 	
-	Map<String, MeshBone> bones = new HashMap<String, MeshBone>();
-	Map<String, MeshVertex> vertices = new HashMap<String, MeshVertex>();
-	Map<String, MeshFace> faces = new HashMap<String, MeshFace>();
-	Map<String, Subset> subsets = new HashMap<String, Subset>();
-	Map<String, MeshBoneAnimation> animations = new HashMap<String, MeshBoneAnimation>();
+	private Map<String, MeshBone> bones = new HashMap<String, MeshBone>();
+	private Map<String, MeshVertex> vertices = new HashMap<String, MeshVertex>();
+	private Map<String, MeshFace> faces = new HashMap<String, MeshFace>();
+	private Map<String, Subset> subsets = new HashMap<String, Subset>();
+	private Map<String, MeshBoneAnimation> animations = new HashMap<String, MeshBoneAnimation>();
 	
-	public Map<String, BoneTransformation> getAnimationState(String animationName, float frame)
-			throws KeyError {
-		
-		if (!animations.containsKey(animationName))
-			throw new KeyError(String.format("No such animation: %s", animationName));
+	public MeshBoneAnimation getAnimation(String name) throws KeyError {
 
-		Map<String, BoneTransformation> transformations = new HashMap<String, BoneTransformation>();
-		MeshBoneAnimation animation = animations.get(animationName);
-		for (MeshBoneAnimation.Layer layer : animation.getLayers()) {
-			
-			String boneId = layer.getBone().getId();
-			
-			// Make sure frame isn't negative:
-			frame += (int)Math.floor(Math.max(0, -frame) / animation.getLength()) * animation.getLength();
-			
-			// Make sure frame is less than animation length:
-			frame -= (int)Math.floor(frame / animation.getLength()) * animation.getLength();
-			
-			int framePrev = Integer.MIN_VALUE,
-				frameNext = Integer.MAX_VALUE,
-				frameFirst = Integer.MAX_VALUE,
-				frameLast = Integer.MIN_VALUE;
-			
-			for (Entry<Integer, MeshBoneAnimation.Key> entry : layer.getKeys().entrySet()) {
-				int keyFrame = entry.getKey();
-				
-				if (keyFrame < frame && keyFrame > framePrev)
-					framePrev = keyFrame;
-				if (keyFrame > frame && keyFrame < frameNext)
-					frameNext = keyFrame;
-				if (keyFrame < frameFirst)
-					frameFirst = keyFrame;
-				if (keyFrame > frameLast)
-					frameLast = keyFrame;
-			}
-			
-			float distanceToPrev;
-			if (framePrev < 0) {
-				framePrev = frameLast;
-				distanceToPrev = frame + animation.getLength() - frameLast;
-			}
-			else
-				distanceToPrev = frame - framePrev;
-			
-			float distanceToNext;
-			if (frameNext > animation.getLength()) {
-				frameNext = frameFirst;
-				distanceToNext = animation.getLength() - frame + frameFirst;
-			}
-			else
-				distanceToNext = frameNext - frame;
-			
-			MeshBoneAnimation.Key keyPrev = layer.getKeys().get(framePrev),
-								  keyNext = layer.getKeys().get(frameNext);
-			
-			transformations.put(boneId, interPolateTransform(keyPrev, keyNext, distanceToPrev, distanceToNext));
-		}
+		if (!animations.containsKey(name))
+			throw new KeyError(String.format("No such animation: %s", name));
 		
-		return transformations;
-	}
-	
-	private BoneTransformation interPolateTransform(Key keyPrev, Key keyNext, float distanceToPrev, float distanceToNext) {
-
-		
-		float total = distanceToPrev + distanceToNext;
-
-		// fPrev + fNext = 1.0
-		float fPrev, fNext;
-		
-		if (total > 0.0f) {
-			fPrev = distanceToPrev / total;
-			fNext = distanceToNext / total;
-		}
-		else {
-			fPrev = 0.5f;
-			fNext = 0.5f;
-		}
-		
-		Quaternion rotation = new Quaternion();
-		rotation.setSlerp(keyPrev.getRotation(), keyNext.getRotation(), fPrev);
-		
-		Vector3f translation = keyPrev.getTranslation().multiplyBy(fNext)
-						  .add(keyNext.getTranslation().multiplyBy(fPrev));
-		
-		return new BoneTransformation(rotation, translation);
+		return animations.get(name);
 	}
 
 	public Map<String, MeshVertex> getTransformedVertices(Map<String, BoneTransformation> transformationsMap) {

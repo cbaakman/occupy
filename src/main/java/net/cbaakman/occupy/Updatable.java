@@ -9,6 +9,8 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
+import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.communicate.Server;
 import net.cbaakman.occupy.game.PlayerRecord;
 
 @Data
@@ -44,5 +46,9 @@ public abstract class Updatable {
 				return field;
 		}
 		throw new NoSuchFieldException(fieldId);
+	}
+	public Updatable(Client client) {
+	}
+	public Updatable(Server server) {
 	}
 }

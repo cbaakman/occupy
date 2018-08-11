@@ -69,10 +69,10 @@ import net.cbaakman.occupy.input.UserInput;
 import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector3f;
 import net.cbaakman.occupy.mesh.MeshFactory;
-import net.cbaakman.occupy.render.ClientGLEventListener;
 import net.cbaakman.occupy.render.InGameGLEventListener;
 import net.cbaakman.occupy.render.LoadGLEventListener;
 import net.cbaakman.occupy.resource.Resource;
+import net.cbaakman.occupy.resource.ResourceManager;
 import net.cbaakman.occupy.security.SSLChannel;
 
 public abstract class Client {
@@ -80,6 +80,7 @@ public abstract class Client {
 	static Logger logger = Logger.getLogger(Client.class);
 	
 	private Camera camera = new Camera();
+	private ResourceManager resourceManager = new ResourceManager(this);
 	private UserInput userInput = new UserInput(this);
 	private JFrame frame;
 	private GLCanvas glCanvas;
@@ -93,6 +94,7 @@ public abstract class Client {
 	protected ClientConfig config;
 	
 	public Client(ClientConfig config) {
+				
 		this.config = config;
 	}
 	
@@ -225,13 +227,16 @@ public abstract class Client {
 			
 		if (updatable == null) {
 			try {
-				updatable = update.getObjectClass().newInstance();
+				Class<?>[] args = new Class<?>[] {Client.class};
+				updatable = update.getObjectClass().getDeclaredConstructor(args).newInstance(this);
 				
 				synchronized(updatables) {
 					updatables.put(update.getObjectID(), updatable);
 				}
-			} catch (InstantiationException | IllegalAccessException e) {
+			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException | NoSuchMethodException | SecurityException | SeriousError e) {
 				errorQueue.pushError(e);
+				return;
 			}
 		}
 		
@@ -273,17 +278,7 @@ public abstract class Client {
 		}
 		
 		Loader loader = new Loader(config.getLoadConcurrency());
-		
-		final Future<FontFactory> fFactory = loader.add(Resource.getFontFactoryJob("lumean"));
-		
-		FontStyle fontStyle = new FontStyle();
-		fontStyle.setSize(36.0f);
-		fontStyle.setStrokeWidth(3.0f);
-		final Future<Font> fFont = loader.add(Resource.getFontJob(fFactory, fontStyle));
-		
-		Future<BufferedImage> fInfantryImage = loader.add(Resource.getImageJob("infantry"));
-		
-		Future<MeshFactory> fInfantryMeshFactory = loader.add(Resource.getMeshJob("infantry"));
+		resourceManager.addAllJobsTo(loader);
 
 		GLProfile profile = GLProfile.get(GLProfile.GL3);
 		GLCapabilities capabilities = new GLCapabilities(profile);
@@ -296,17 +291,10 @@ public abstract class Client {
 				GLEventListener listener0 = glCanvas.getGLEventListener(0);
 				glCanvas.removeGLEventListener(listener0);
 				
-				try {
-					camera.setPosition(new Vector3f(0.0f, 100.0f, 100.0f));
-					camera.setOrientation(new Quaternion().rotateByAngleX((float)Math.toRadians(-45.0)));
+				camera.setPosition(new Vector3f(0.0f, 100.0f, 100.0f));
+				camera.setOrientation(new Quaternion().rotateByAngleX((float)Math.toRadians(-45.0)));
 					
-					glCanvas.addGLEventListener(new InGameGLEventListener(Client.this,
-																		  fInfantryMeshFactory.get(),
-																		  fInfantryImage.get()));
-				} catch (InterruptedException | ExecutionException e) {
-
-					getErrorQueue().pushError(e);
-				}
+				glCanvas.addGLEventListener(new InGameGLEventListener(Client.this));
 			}
 		});
 		loader.setErrorQueue(getErrorQueue());
@@ -464,4 +452,9 @@ public abstract class Client {
 	public ClientConfig getConfig() {
 		return config;
 	}
+	
+	public ResourceManager getResourceManager() {
+		return resourceManager;
+	}
+			
 }

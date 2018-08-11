@@ -1,16 +1,43 @@
 package net.cbaakman.occupy.game;
 
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
 
+import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.communicate.Server;
+import net.cbaakman.occupy.errors.KeyError;
+import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.math.Vector3f;
+import net.cbaakman.occupy.mesh.MeshBoneAnimationState;
+import net.cbaakman.occupy.mesh.MeshFactory;
 
 public class Infantry extends Unit {
 	
 	Logger logger = Logger.getLogger(Infantry.class);
 	
 	private final static float WALK_SPEED = 1.0f;
+	
+	private MeshBoneAnimationState animationState;
+	
+	public Infantry(Server server) {
+		super(server);
+	}
+	
+	public Infantry(Client client) {
+		super(client);
+		try {
+			MeshFactory mesh = client.getResourceManager().getMesh("infantry");
+			animationState = new MeshBoneAnimationState(mesh.getAnimation("walk"), 10.0f);
+		} catch (KeyError | InterruptedException | ExecutionException e) {
+			throw new SeriousError(e);
+		}
+	}
+	
+	public MeshBoneAnimationState getAnimationState() {
+		return animationState;
+	}
 	
 	@Override
 	public void updateOnClient(float dt) {
@@ -19,6 +46,8 @@ public class Infantry extends Unit {
 			MoveOrder order = (MoveOrder)currentOrder;
 			moveTo(order.getDestination(), dt);
 		}
+		
+		animationState.update(dt);
 	}
 
 	private void moveTo(Vector3f destination, float dt) {
