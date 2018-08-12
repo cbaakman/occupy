@@ -1,30 +1,21 @@
-package net.cbaakman.occupy.communicate;
+package net.cbaakman.occupy;
 
 import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.awt.image.BufferedImage;
 
 import javax.swing.JFrame;
 
@@ -41,14 +32,12 @@ import com.jogamp.opengl.math.Quaternion;
 
 import java.security.InvalidKeyException;
 
-import javax.imageio.ImageIO;
-
-import net.cbaakman.occupy.Identifier;
-import net.cbaakman.occupy.Updatable;
-import net.cbaakman.occupy.Update;
 import net.cbaakman.occupy.annotations.ClientToServer;
 import net.cbaakman.occupy.annotations.ServerToClient;
 import net.cbaakman.occupy.authenticate.Credentials;
+import net.cbaakman.occupy.communicate.Connection;
+import net.cbaakman.occupy.communicate.Packet;
+import net.cbaakman.occupy.communicate.ServerInfo;
 import net.cbaakman.occupy.communicate.enums.PacketType;
 import net.cbaakman.occupy.communicate.enums.RequestType;
 import net.cbaakman.occupy.communicate.enums.ResponseType;
@@ -59,19 +48,13 @@ import net.cbaakman.occupy.errors.ErrorQueue;
 import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.RenderError;
 import net.cbaakman.occupy.errors.SeriousError;
-import net.cbaakman.occupy.font.Font;
-import net.cbaakman.occupy.font.FontFactory;
-import net.cbaakman.occupy.font.FontStyle;
 import net.cbaakman.occupy.game.Camera;
 import net.cbaakman.occupy.game.PlayerRecord;
-import net.cbaakman.occupy.input.MemoryKeyListener;
 import net.cbaakman.occupy.input.UserInput;
 import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector3f;
-import net.cbaakman.occupy.mesh.MeshFactory;
 import net.cbaakman.occupy.render.InGameGLEventListener;
 import net.cbaakman.occupy.render.LoadGLEventListener;
-import net.cbaakman.occupy.resource.Resource;
 import net.cbaakman.occupy.resource.ResourceManager;
 import net.cbaakman.occupy.security.SSLChannel;
 

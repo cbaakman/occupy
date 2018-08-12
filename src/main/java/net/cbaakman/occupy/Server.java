@@ -1,4 +1,4 @@
-package net.cbaakman.occupy.communicate;
+package net.cbaakman.occupy;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -29,14 +29,13 @@ import javax.crypto.NoSuchPaddingException;
 import lombok.Data;
 import lombok.Setter;
 import lombok.AccessLevel;
-import net.cbaakman.occupy.Identifier;
-import net.cbaakman.occupy.UUIDIdentifier;
-import net.cbaakman.occupy.Updatable;
-import net.cbaakman.occupy.Update;
 import net.cbaakman.occupy.annotations.ClientToServer;
 import net.cbaakman.occupy.annotations.ServerToClient;
 import net.cbaakman.occupy.authenticate.Authenticator;
 import net.cbaakman.occupy.authenticate.Credentials;
+import net.cbaakman.occupy.communicate.Connection;
+import net.cbaakman.occupy.communicate.Packet;
+import net.cbaakman.occupy.communicate.ServerInfo;
 import net.cbaakman.occupy.communicate.enums.PacketType;
 import net.cbaakman.occupy.communicate.enums.RequestType;
 import net.cbaakman.occupy.communicate.enums.ResponseType;
