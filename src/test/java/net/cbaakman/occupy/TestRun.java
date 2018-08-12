@@ -9,8 +9,6 @@ import java.util.Random;
 
 import net.cbaakman.occupy.authenticate.Authenticator;
 import net.cbaakman.occupy.authenticate.Credentials;
-import net.cbaakman.occupy.communicate.Client;
-import net.cbaakman.occupy.communicate.Server;
 import net.cbaakman.occupy.config.ClientConfig;
 import net.cbaakman.occupy.config.ServerConfig;
 import net.cbaakman.occupy.errors.AuthenticationError;

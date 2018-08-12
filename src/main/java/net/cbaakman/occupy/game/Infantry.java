@@ -5,8 +5,8 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
 
-import net.cbaakman.occupy.communicate.Client;
-import net.cbaakman.occupy.communicate.Server;
+import net.cbaakman.occupy.Client;
+import net.cbaakman.occupy.Server;
 import net.cbaakman.occupy.errors.KeyError;
 import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.math.Vector3f;

@@ -7,12 +7,12 @@ import org.apache.log4j.Logger;
 import com.jogamp.opengl.math.Quaternion;
 
 import lombok.Data;
+import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.Identifier;
+import net.cbaakman.occupy.Server;
 import net.cbaakman.occupy.Updatable;
 import net.cbaakman.occupy.annotations.ClientToServer;
 import net.cbaakman.occupy.annotations.ServerToClient;
-import net.cbaakman.occupy.communicate.Client;
-import net.cbaakman.occupy.communicate.Server;
 import net.cbaakman.occupy.math.Vector3f;
 
 @Data

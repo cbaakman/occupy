@@ -12,10 +12,10 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import junit.framework.TestCase;
+import net.cbaakman.occupy.Client;
+import net.cbaakman.occupy.Server;
 import net.cbaakman.occupy.authenticate.Authenticator;
 import net.cbaakman.occupy.authenticate.Credentials;
-import net.cbaakman.occupy.communicate.Client;
-import net.cbaakman.occupy.communicate.Server;
 import net.cbaakman.occupy.communicate.ServerInfo;
 import net.cbaakman.occupy.config.ClientConfig;
 import net.cbaakman.occupy.config.ServerConfig;

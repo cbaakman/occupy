@@ -20,8 +20,8 @@ import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
 import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
 
+import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.Updatable;
-import net.cbaakman.occupy.communicate.Client;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.KeyError;
 import net.cbaakman.occupy.errors.MissingGlyphError;
@@ -36,6 +36,7 @@ import net.cbaakman.occupy.math.Vector3f;
 import net.cbaakman.occupy.mesh.MeshFactory;
 import net.cbaakman.occupy.render.entity.EntityRenderer;
 import net.cbaakman.occupy.render.entity.InfantryRenderer;
+import net.cbaakman.occupy.render.entity.RenderRegistry;
 
 public class InGameGLEventListener implements GLEventListener {
 	
@@ -43,8 +44,7 @@ public class InGameGLEventListener implements GLEventListener {
 	
 	private Client client;
 
-	private Map<Class<? extends Entity>, EntityRenderer<?>> entityRenderers =
-			new HashMap<Class<? extends Entity>, EntityRenderer<?>>();
+	private RenderRegistry renderRegistry = new RenderRegistry();
 	
 	public InGameGLEventListener(Client client) {
 		this.client = client;
@@ -76,7 +76,7 @@ public class InGameGLEventListener implements GLEventListener {
 			for (Updatable updatable : client.getUpdatables()) {
 				if (updatable instanceof Entity) {
 					Entity entity = (Entity)updatable;
-					renderEntity(gl3, projectionMatrix, modelViewMatrix, entity.getClass().cast(entity));
+					renderEntity(gl3, projectionMatrix, modelViewMatrix, entity);
 				}
 			}
 			
@@ -89,19 +89,14 @@ public class InGameGLEventListener implements GLEventListener {
 														  float[] modelViewMatrix,
 														  T entity)
 							  throws GL3Error {
-		Class<T> entityClass = (Class<T>)entity.getClass(); 
-		EntityRenderer<T> renderer = (EntityRenderer<T>)entityRenderers.get(entityClass);
-		if (renderer == null) {
-			client.getErrorQueue().pushError(
-					new KeyError(String.format("missing entity renderer for %s",
-											   entityClass.getName())));
+		try {
+			EntityRenderer<T> renderer = (EntityRenderer<T>)renderRegistry.getForEntity(entity.getClass());
+
+			renderer.renderOpaque(gl3, projectionMatrix, modelViewMatrix, entity);
+			renderer.renderTransparent(gl3, projectionMatrix, modelViewMatrix, entity);
+		} catch (KeyError e) {
+			client.getErrorQueue().pushError(e);
 		}
-		renderer.renderOpaque(gl3, projectionMatrix, modelViewMatrix, entity);
-		renderer.renderTransparent(gl3, projectionMatrix, modelViewMatrix, entity);
-	}
-	
-	private <T extends Entity> void registerRenderer(Class<T> entityClass, EntityRenderer<T> renderer) {
-		entityRenderers.put(entityClass, renderer);
 	}
 
 	@Override
@@ -109,9 +104,7 @@ public class InGameGLEventListener implements GLEventListener {
 		GL3 gl3 = drawable.getGL().getGL3();
 		
 		try {
-			for (EntityRenderer<?> renderer : entityRenderers.values()) {
-				renderer.cleanUp(gl3);
-			}
+			renderRegistry.cleanUpAll(gl3);
 		} catch (GL3Error e) {
 			client.getErrorQueue().pushError(e);
 		}
@@ -122,7 +115,7 @@ public class InGameGLEventListener implements GLEventListener {
 		GL3 gl3 = drawable.getGL().getGL3();
 		
 		try {
-			registerRenderer(Infantry.class, new InfantryRenderer(client, gl3));
+			renderRegistry.registerForEntity(Infantry.class, new InfantryRenderer(client, gl3));
 		} catch (GL3Error | SeriousError e) {
 			client.getErrorQueue().pushError(e);
 		}

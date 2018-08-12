@@ -5,7 +5,7 @@ import java.awt.event.MouseWheelListener;
 
 import org.apache.log4j.Logger;
 
-import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.config.ClientConfig;
 import net.cbaakman.occupy.game.Camera;
 import net.cbaakman.occupy.math.Vector3f;

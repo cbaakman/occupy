@@ -9,8 +9,6 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
-import net.cbaakman.occupy.communicate.Client;
-import net.cbaakman.occupy.communicate.Server;
 import net.cbaakman.occupy.game.PlayerRecord;
 
 @Data

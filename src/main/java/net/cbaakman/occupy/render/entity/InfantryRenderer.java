@@ -14,7 +14,7 @@ import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
 import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
 
-import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.KeyError;
 import net.cbaakman.occupy.errors.SeriousError;
@@ -61,6 +61,7 @@ public class InfantryRenderer extends EntityRenderer<Infantry> {
 
 	private int shaderProgram = 0;
 	private GLMeshRenderer glMeshRenderer;
+	private Texture texture;
 
 	public InfantryRenderer(Client client, GL3 gl3)
 			throws GL3Error, SeriousError {
@@ -79,7 +80,7 @@ public class InfantryRenderer extends EntityRenderer<Infantry> {
 			textureData = AWTTextureIO.newTextureData(gl3.getGLProfile(), meshImage, true);
 		}
 
-		Texture texture = TextureIO.newTexture(gl3, textureData);
+		texture = TextureIO.newTexture(gl3, textureData);
 
 		texture.setTexParameterf(gl3, GL3.GL_TEXTURE_MIN_FILTER, GL3.GL_NEAREST);
 		texture.setTexParameterf(gl3, GL3.GL_TEXTURE_MAG_FILTER, GL3.GL_NEAREST);
@@ -107,6 +108,7 @@ public class InfantryRenderer extends EntityRenderer<Infantry> {
 	public void cleanup(GL3 gl3) throws GL3Error {
 
 		glMeshRenderer.cleanup(gl3);
+		texture.destroy(gl3);
 		
 		Shader.deleteProgram(gl3, shaderProgram);
 	}

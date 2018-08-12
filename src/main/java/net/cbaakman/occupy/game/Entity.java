@@ -1,8 +1,8 @@
 package net.cbaakman.occupy.game;
 
+import net.cbaakman.occupy.Client;
+import net.cbaakman.occupy.Server;
 import net.cbaakman.occupy.Updatable;
-import net.cbaakman.occupy.communicate.Client;
-import net.cbaakman.occupy.communicate.Server;
 
 public class Entity extends Updatable {
 

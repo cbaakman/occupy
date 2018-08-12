@@ -11,8 +11,8 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.math.FloatUtil;
 
+import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.annotations.VertexAttrib;
-import net.cbaakman.occupy.communicate.Client;
 import net.cbaakman.occupy.errors.ErrorQueue;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.ShaderCompileError;

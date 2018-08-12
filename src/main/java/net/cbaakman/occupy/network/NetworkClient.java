@@ -6,7 +6,7 @@ import java.net.Socket;
 
 import org.apache.log4j.Logger;
 
-import net.cbaakman.occupy.communicate.Client;
+import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.communicate.Connection;
 import net.cbaakman.occupy.communicate.Packet;
 import net.cbaakman.occupy.config.ClientConfig;

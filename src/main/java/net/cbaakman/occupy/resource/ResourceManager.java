@@ -6,7 +6,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import net.cbaakman.occupy.communicate.Client;
+import org.apache.log4j.Logger;
+
+import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.errors.KeyError;
 import net.cbaakman.occupy.font.Font;
 import net.cbaakman.occupy.font.FontFactory;
@@ -15,6 +17,8 @@ import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.mesh.MeshFactory;
 
 public class ResourceManager {
+	
+	static Logger logger = Logger.getLogger(ResourceManager.class);
 
 	private Client client;
 	

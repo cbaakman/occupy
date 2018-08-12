@@ -6,8 +6,8 @@ import java.nio.channels.SocketChannel;
 import org.apache.log4j.Logger;
 
 import net.cbaakman.occupy.Identifier;
+import net.cbaakman.occupy.Server;
 import net.cbaakman.occupy.communicate.Packet;
-import net.cbaakman.occupy.communicate.Server;
 import net.cbaakman.occupy.config.ServerConfig;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.InitError;
