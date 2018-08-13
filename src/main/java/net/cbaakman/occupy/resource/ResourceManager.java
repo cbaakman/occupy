@@ -31,7 +31,6 @@ public class ResourceManager {
 
 	public MeshFactory getMesh(String name)
 		throws KeyError, InterruptedException, ExecutionException {
-		
 		synchronized(meshes) {
 			if (!meshes.containsKey(name))
 				throw new KeyError(name);
@@ -52,7 +51,6 @@ public class ResourceManager {
 	}
 
 	public void addAllJobsTo(Loader loader) {
-		
 		addImageJobTo(loader, "infantry");
 		addMeshJobTo(loader, "infantry");
 	}

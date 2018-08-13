@@ -2,24 +2,13 @@ package net.cbaakman.occupy;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.net.InetAddress;
-import java.nio.file.Files;
 import java.security.InvalidKeyException;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.UUID;
 
 import javax.crypto.BadPaddingException;
@@ -27,8 +16,6 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
 import lombok.Data;
-import lombok.Setter;
-import lombok.AccessLevel;
 import net.cbaakman.occupy.annotations.ClientToServer;
 import net.cbaakman.occupy.annotations.ServerToClient;
 import net.cbaakman.occupy.authenticate.Authenticator;
@@ -47,7 +34,6 @@ import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.RenderError;
 import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.game.PlayerRecord;
-import net.cbaakman.occupy.network.Address;
 import net.cbaakman.occupy.security.SSLChannel;
 import org.apache.log4j.Logger;
 import org.apache.maven.model.Model;
@@ -73,8 +59,8 @@ public abstract class Server {
 		}
 	}
 	
-	private Map<UUID, Updatable> updatables = new HashMap<UUID, Updatable>();
-	private Map<Identifier, ClientRecord> clientRecords = new HashMap<Identifier, ClientRecord>();
+	private SynchronizedPool<UUID, Updatable> updatables = new SynchronizedPool<UUID, Updatable>();
+	private SynchronizedPool<Identifier, ClientRecord> clientRecords = new SynchronizedPool<Identifier, ClientRecord>();
 	
 	protected ServerConfig config;
 	private Identifier serverId = new UUIDIdentifier(UUID.randomUUID());
@@ -141,7 +127,7 @@ public abstract class Server {
 	protected void onClientConnect(Identifier clientId, Connection connection)
 			throws CommunicationError {
 		
-		if (clientRecords.containsKey(clientId)) {
+		if (clientRecords.hasKey(clientId)) {
 			clientRecords.get(clientId).setLastContact(new Date());
 		}
 		
@@ -230,14 +216,12 @@ public abstract class Server {
 	
 	protected void logoutClient(Identifier clientId) {
 
-		synchronized(clientRecords) {
-			clientRecords.remove(clientId);
-		}
+		clientRecords.remove(clientId);
 	}
 	
 	protected void onPacket(Identifier clientId, Packet packet) throws SeriousError {
 				
-		if (clientRecords.containsKey(clientId)) {
+		if (clientRecords.hasKey(clientId)) {
 			
 			clientRecords.get(clientId).setLastContact(new Date());
 
@@ -263,11 +247,7 @@ public abstract class Server {
 
 	protected void processUpdate(Identifier clientId, Update update) throws SeriousError {
 		
-		Updatable updatable;
-		
-		synchronized(updatables) {
-			updatable = updatables.get(update.getObjectID());
-		}
+		Updatable updatable = updatables.get(update.getObjectID());
 			
 		if (updatable == null)
 			return;
@@ -292,54 +272,44 @@ public abstract class Server {
 	private void update(float dt) throws CommunicationError {
 				
 		// timeout clients
-		synchronized (clientRecords) {
-			Date now = new Date();
-			for (Entry<Identifier, ClientRecord> entry : clientRecords.entrySet()) {
-				ClientRecord clientRecord = entry.getValue();
-				if ((now.getTime() - clientRecord.getLastContact().getTime()) > config.getContactTimeoutMS()) {
-					clientRecords.remove(entry.getKey());
-				}
+		Date now = new Date();
+		for (Identifier id : clientRecords.getKeys()) {
+			ClientRecord clientRecord = clientRecords.get(id);
+			if ((now.getTime() - clientRecord.getLastContact().getTime()) > config.getContactTimeoutMS()) {
+				clientRecords.remove(id);
 			}
 		}
 		
-		synchronized (updatables) {
-			for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
-				entry.getValue().updateOnServer(dt);
-			}
+		for (Updatable updatable : updatables.getAll()) {
+			updatable.updateOnServer(dt);
 		}
 		
-		synchronized(clientRecords) {
-			for (Entry<Identifier, ClientRecord> ent : clientRecords.entrySet()) {
-				ClientRecord clientRecord = ent.getValue();
-				Identifier clientId = ent.getKey();
+		for (Identifier clientId : clientRecords.getKeys()) {
+			ClientRecord clientRecord = clientRecords.get(clientId);
+			
+			// Ping to maintain contact:
+			sendPacket(clientId, new Packet(PacketType.PING, 1));
+			
+			for (UUID objectId : updatables.getKeys()) {
+				Updatable updatable = updatables.get(objectId);
 				
-				// Ping to maintain contact:
-				sendPacket(clientId, new Packet(PacketType.PING, 1));
+				Class<? extends Updatable> objectClass = updatable.getClass();
 				
-				synchronized(updatables) {
-					for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
-						UUID objectId = entry.getKey();
-						Updatable updatable = entry.getValue();
+				for (Field field : updatable.getDeclaredFieldsSinceUpdatable()) {
+					
+					if (field.isAnnotationPresent(ServerToClient.class) ||
+						field.isAnnotationPresent(ClientToServer.class) && 
+						!updatable.mayBeUpdatedBy(clientRecord.getPlayerRecord())) {
+
+						field.setAccessible(true);
 						
-						Class<? extends Updatable> objectClass = updatable.getClass();
-						
-						for (Field field : updatable.getDeclaredFieldsSinceUpdatable()) {
+						try {
+							Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
+
+							sendPacket(clientId, new Packet(PacketType.UPDATE, update));
 							
-							if (field.isAnnotationPresent(ServerToClient.class) ||
-								field.isAnnotationPresent(ClientToServer.class) && 
-								!updatable.mayBeUpdatedBy(clientRecord.getPlayerRecord())) {
-
-								field.setAccessible(true);
-								
-								try {
-									Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
-
-									sendPacket(clientId, new Packet(PacketType.UPDATE, update));
-									
-								} catch (IllegalArgumentException | IllegalAccessException e) {
-									throw new SeriousError(e);
-								}
-							}
+						} catch (IllegalArgumentException | IllegalAccessException e) {
+							throw new SeriousError(e);
 						}
 					}
 				}
@@ -359,8 +329,6 @@ public abstract class Server {
 	}
 	
 	public <T extends Updatable> void addUpdatable(T updatable) {
-		synchronized(updatables) {
-			updatables.put(UUID.randomUUID(), updatable);
-		}
+		updatables.put(UUID.randomUUID(), updatable);
 	}
 }

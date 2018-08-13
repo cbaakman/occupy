@@ -2,6 +2,8 @@ package net.cbaakman.occupy;
 
 import java.awt.Dimension;
 import java.awt.Toolkit;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.ByteArrayOutputStream;
@@ -9,13 +11,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.UUID;
 
 import javax.swing.JFrame;
 
@@ -28,12 +23,9 @@ import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
-import com.jogamp.opengl.math.Quaternion;
 
 import java.security.InvalidKeyException;
 
-import net.cbaakman.occupy.annotations.ClientToServer;
-import net.cbaakman.occupy.annotations.ServerToClient;
 import net.cbaakman.occupy.authenticate.Credentials;
 import net.cbaakman.occupy.communicate.Connection;
 import net.cbaakman.occupy.communicate.Packet;
@@ -48,37 +40,41 @@ import net.cbaakman.occupy.errors.ErrorQueue;
 import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.RenderError;
 import net.cbaakman.occupy.errors.SeriousError;
-import net.cbaakman.occupy.game.Camera;
 import net.cbaakman.occupy.game.PlayerRecord;
-import net.cbaakman.occupy.input.UserInput;
 import net.cbaakman.occupy.load.Loader;
-import net.cbaakman.occupy.math.Vector3f;
-import net.cbaakman.occupy.render.InGameGLEventListener;
-import net.cbaakman.occupy.render.LoadGLEventListener;
 import net.cbaakman.occupy.resource.ResourceManager;
+import net.cbaakman.occupy.scene.InGameScene;
+import net.cbaakman.occupy.scene.LoadScene;
+import net.cbaakman.occupy.scene.Scene;
 import net.cbaakman.occupy.security.SSLChannel;
 
 public abstract class Client {
 	
 	static Logger logger = Logger.getLogger(Client.class);
 	
-	private Camera camera = new Camera();
 	private ResourceManager resourceManager = new ResourceManager(this);
-	private UserInput userInput = new UserInput(this);
 	private JFrame frame;
 	private GLCanvas glCanvas;
 	private ErrorQueue errorQueue = new ErrorQueue();
+	
+	private Scene currentScene = null;
+	private PlayerRecord loggedInPlayerRecord = null;
+	
+	/**
+	 * Executes jobs that have to be executed in he main thread, where openGL runs.
+	 */
+	private JobScheduler mainThreadScheduler = new JobScheduler();
+	
+	private Loader loader;
 	private boolean running;
-	
-	private PlayerRecord playerRecord = null;
-	
-	private Map<UUID, Updatable> updatables = new HashMap<UUID, Updatable>();
 	
 	protected ClientConfig config;
 	
 	public Client(ClientConfig config) {
 				
 		this.config = config;
+		
+		loader = new Loader(config.getLoadConcurrency());
 	}
 	
 	public static String getVersion() {
@@ -97,14 +93,16 @@ public abstract class Client {
 
 	protected void onPacket(Packet packet) throws SeriousError {
 				
-		if (!connectedToServer())
+		if (!loggedIn())
 			return;
 		
 		if (packet.getType().equals(PacketType.UPDATE)) {
-			processUpdateFromServer((Update)packet.getData());
+
+			if (currentScene != null)
+				currentScene.onUpdateFromServer((Update)packet.getData());
 		}
 		else if (packet.getType().equals(PacketType.LOGOUT)) {
-			disconnectFromServer();
+			logout();
 		}
 		else if (packet.getType().equals(PacketType.PING)) {
 			int bounce = (Integer)packet.getData();
@@ -180,7 +178,7 @@ public abstract class Client {
 			
 			if (response.equals(ResponseType.OK)) {
 				// Authentication OK
-				playerRecord = new PlayerRecord(credentials.getUsername());
+				loggedInPlayerRecord = new PlayerRecord(credentials.getUsername());
 				return;
 			}
 			else if (response.equals(ResponseType.AUTHENTICATION_ERROR))
@@ -198,45 +196,6 @@ public abstract class Client {
 			} catch (IOException e) {
 				throw new CommunicationError(e);
 			}
-		}
-	}
-	
-	private void processUpdateFromServer(Update update) {
-		Updatable updatable;
-		
-		synchronized(updatables) {
-			updatable = updatables.get(update.getObjectID());
-		}
-			
-		if (updatable == null) {
-			try {
-				Class<?>[] args = new Class<?>[] {Client.class};
-				updatable = update.getObjectClass().getDeclaredConstructor(args).newInstance(this);
-				
-				synchronized(updatables) {
-					updatables.put(update.getObjectID(), updatable);
-				}
-			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException | NoSuchMethodException | SecurityException | SeriousError e) {
-				errorQueue.pushError(e);
-				return;
-			}
-		}
-		
-		try {
-			Field field = updatable.getDeclaredFieldSinceUpdatable(update.getFieldID());
-			
-			if (field.isAnnotationPresent(ServerToClient.class) ||
-					field.isAnnotationPresent(ClientToServer.class) &&
-					!updatable.mayBeUpdatedBy(playerRecord)) {
-			
-				field.setAccessible(true);
-				field.set(updatable, update.getValue());
-			}
-			
-		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException |
-				IllegalAccessException e) {
-			errorQueue.pushError(e);
 		}
 	}
 	
@@ -260,7 +219,6 @@ public abstract class Client {
 			config.getDataDir().toFile().mkdirs();
 		}
 		
-		Loader loader = new Loader(config.getLoadConcurrency());
 		resourceManager.addAllJobsTo(loader);
 
 		GLProfile profile = GLProfile.get(GLProfile.GL3);
@@ -271,25 +229,28 @@ public abstract class Client {
 		loader.whenDone(new Runnable() {
 			@Override
 			public void run() {
-				GLEventListener listener0 = glCanvas.getGLEventListener(0);
-				glCanvas.removeGLEventListener(listener0);
+				// TODO: show login screen
+				while (!loggedIn()) {
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						errorQueue.pushError(e);
+						return;
+					}
+				}
 				
-				camera.setPosition(new Vector3f(0.0f, 100.0f, 100.0f));
-				camera.setOrientation(new Quaternion().rotateByAngleX((float)Math.toRadians(-45.0)));
-					
-				glCanvas.addGLEventListener(new InGameGLEventListener(Client.this));
+				switchScene(new InGameScene(Client.this, loggedInPlayerRecord));
 			}
 		});
 		loader.setErrorQueue(getErrorQueue());
-		loader.start();
 
 		glCanvas.setSize(config.getScreenWidth(), config.getScreenHeight());
 		
-		glCanvas.addGLEventListener(new LoadGLEventListener(loader, this));
+		switchScene(new LoadScene(loader, this));
+		
+		loader.start();
 
 		frame = new JFrame();
-		glCanvas.addKeyListener(userInput);
-		glCanvas.addMouseWheelListener(userInput);
 		frame.getContentPane().add(glCanvas);
 		frame.addWindowListener(new WindowAdapter() {
             @Override
@@ -310,44 +271,11 @@ public abstract class Client {
 	
 	protected void update(float dt) throws CommunicationError, RenderError, InitError {
 
-		userInput.update(dt);
+		mainThreadScheduler.executeAll();
 		
-		if (playerRecord != null) {
-			synchronized (updatables) {
-				for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
-					entry.getValue().updateOnClient(dt);
-				}
-			}
-			
-			synchronized(updatables) {
-				for (Entry<UUID, Updatable> entry : updatables.entrySet()) {
-					UUID objectId = entry.getKey();
-					Updatable updatable = entry.getValue();
-					
-					Class<? extends Updatable> objectClass = updatable.getClass();
-					
-					for (Field field : objectClass.getDeclaredFields()) {
-						
-						if (field.isAnnotationPresent(ClientToServer.class)
-								&& updatable.mayBeUpdatedBy(playerRecord)) {
-							
-							field.setAccessible(true);
-					
-							try {
-								Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
-	
-								sendPacket(new Packet(PacketType.UPDATE, update));
-								
-							} catch (IllegalArgumentException | IllegalAccessException e) {
-								// Must not happen!
-								throw new SeriousError(e);
-							}
-						}
-					}
-				}
-			}
-		}
-		
+		if (currentScene != null)
+			currentScene.update(dt);
+
 		glCanvas.display();
 
 		errorQueue.throwAnyFirstEncounteredError();
@@ -372,7 +300,7 @@ public abstract class Client {
 				try {
 					update(dt);
 				} catch (CommunicationError e) {
-					disconnectFromServer();
+					logout();
 					
 					// TODO: show error screen
 					logger.error(e.getMessage(), e);
@@ -383,8 +311,8 @@ public abstract class Client {
 				}
 			}
 		} finally {  // always try to shut down tidily
-			if (connectedToServer())
-				disconnectFromServer();
+			if (loggedIn())
+				logout();
 
 			shutdownClient();
 			shutdownCommunication();
@@ -404,32 +332,21 @@ public abstract class Client {
 		running = false;
 	}
 	
-	public boolean connectedToServer() {
-		return playerRecord != null;
-	}
-	
-	public void disconnectFromServer() {
-		playerRecord = null;
-		
+	public void logout() {
+		loggedInPlayerRecord = null;
     	try {
 			sendPacket(new Packet(PacketType.LOGOUT, null));
 		} catch (CommunicationError e) {
 			// Do nothing with this, since we're disconnecting anyway.
 		}
-    	
-    	updatables.clear();
 	}
 
 	public ErrorQueue getErrorQueue() {
 		return errorQueue;
 	}
-
-	public Collection<Updatable> getUpdatables() {
-		return updatables.values();
-	}
-
-	public Camera getCamera() {
-		return camera;
+	
+	public boolean loggedIn() {
+		return loggedInPlayerRecord != null;
 	}
 
 	public ClientConfig getConfig() {
@@ -439,5 +356,30 @@ public abstract class Client {
 	public ResourceManager getResourceManager() {
 		return resourceManager;
 	}
-			
+	
+	public void switchScene(Scene scene) {
+		mainThreadScheduler.schedule(new Runnable(){
+
+			@Override
+			public void run() {
+				if (glCanvas.getGLEventListenerCount() > 0) {
+					GLEventListener listener0 = glCanvas.getGLEventListener(0);
+					glCanvas.removeGLEventListener(listener0);
+				}
+				glCanvas.addGLEventListener(scene);
+				
+				for (KeyListener keyListener : glCanvas.getKeyListeners()) {
+					glCanvas.removeKeyListener(keyListener);
+				}
+				glCanvas.addKeyListener(scene);
+				
+				for (MouseWheelListener mouseWheelListener : glCanvas.getMouseWheelListeners()) {
+					glCanvas.removeMouseWheelListener(mouseWheelListener);
+				}
+				glCanvas.addMouseWheelListener(scene);
+				
+				currentScene = scene;
+			}
+		});
+	}
 }

@@ -7,6 +7,8 @@ import java.util.concurrent.Future;
 
 import javax.imageio.ImageIO;
 
+import org.apache.log4j.Logger;
+
 import net.cbaakman.occupy.font.Font;
 import net.cbaakman.occupy.font.FontFactory;
 import net.cbaakman.occupy.font.FontStyle;
@@ -14,6 +16,8 @@ import net.cbaakman.occupy.load.LoadJob;
 import net.cbaakman.occupy.mesh.MeshFactory;
 
 public class Resource {
+	
+	static Logger logger = Logger.getLogger(Resource.class);
 
 	public static LoadJob<BufferedImage> getImageJob(String name) {
 		
@@ -81,7 +85,7 @@ public class Resource {
 
 			@Override
 			public MeshFactory call() throws Exception {
-				
+
 				InputStream inputStream = Resource.class.getResourceAsStream("/net/cbaakman/occupy/mesh/infantry.xml");
 				if (inputStream == null)
 					throw new FileNotFoundException(path);

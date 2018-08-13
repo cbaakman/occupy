@@ -9,7 +9,6 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.log4j.Logger;
 
-import lombok.Data;
 import net.cbaakman.occupy.errors.ErrorQueue;
 
 public class Loader {
@@ -23,15 +22,13 @@ public class Loader {
 		private LoadJob<? extends Object> job;
 		
 		private Object result = null;
-		private Exception error = null;
+		private ExecutionException error = null;
 		
-		public synchronized LoadJob<? extends Object> getJob() {
+		public LoadJob<? extends Object> getJob() {
 			return job;
 		}
 		
-		public synchronized void setJob(LoadJob<? extends Object> j) {
-			job = j;
-		}
+		// Make sure the setters and getters are not used at the same time!
 		
 		public synchronized Object getResult() {
 			return result;
@@ -41,90 +38,172 @@ public class Loader {
 			result = r;
 		}
 		
-		public synchronized Exception getError() {
+		public synchronized ExecutionException getError() {
 			return error;
 		}
 		
-		public synchronized void setError(Exception e) {
+		public synchronized void setError(ExecutionException e) {
 			error = e;
 		}
 	}
 	
+	private Boolean started = false,
+					finished = false;
+	
 	private List<LoadJobEntry> jobs = new ArrayList<LoadJobEntry>();
-	private Integer nJobsDone = 0, nJobsError = 0;
+	private Integer nJobsDone = 0,
+					nJobsError = 0;
 	
 	public LoadStats getStats() {
-		
-		LoadStats stats = new LoadStats();
-		synchronized(nJobsDone) {
+		synchronized(threads) {
 			synchronized(jobs) {
-				synchronized(threads) {
-					stats.setWaiting(jobs.size());
-					stats.setDone(nJobsDone);
-					stats.setError(nJobsError);
-					
-					int count = 0;
-					for (LoaderThread t : threads)
-						if (t.isAlive())
-							count++;
-					stats.setRunning(count);
-				}
-			}
-		}
-		return stats;
-	}
+				synchronized(nJobsDone) {
+					synchronized(nJobsError) {
+						LoadStats stats = new LoadStats();
+						
+						stats.setWaiting(jobs.size());
+						stats.setDone(nJobsDone);
+						stats.setError(nJobsError);
+						
+						int count = 0;
+						for (LoaderThread thread : threads)
+							if (thread.isRunningAJob())
+								count++;
+						stats.setRunning(count);
 
-	private LoadJobEntry pickJobToRun() {
-		synchronized(jobs) {
-			for (LoadJobEntry entry : jobs) {
-				if (entry.getJob().isReady() &&
-						entry.getResult() == null && entry.getError() == null) {
-					
-					jobs.remove(entry);
-					return entry;
+						return stats;
+					}
 				}
 			}
 		}
-		
-		return null;
 	}
 	
-	public void runJob(LoadJobEntry entry) {
-		try {
-			entry.setResult(entry.getJob().call());
-
-			synchronized(nJobsDone) {
-				nJobsDone++;
+	private void markJobless(LoaderThread thread) {
+		boolean done = false;
+		synchronized(threads) {
+			threads.remove(thread);
+			done = threads.size() <= 0;
+		}
+		if (done) {
+			synchronized(finished) {
+				finished = true;
 			}
-		} catch (Exception e) {
-			if (errorQueue != null)
-				errorQueue.pushError(e);
-			entry.setError(e);
-
-			synchronized(nJobsError) {
-				nJobsError++;
+			
+			if (runWhenDone != null) {
+				Thread t = new Thread(runWhenDone);
+				t.start();
 			}
+		}
+	}
+	
+	private List<LoaderThread> threads = new ArrayList<LoaderThread>();
+	
+	public Loader(int nConcurrent) {
+		int i;
+		for (i = 0; i < nConcurrent; i++)
+			threads.add(new LoaderThread());
+	}
+	
+	public void start() {
+		synchronized(started) {
+			synchronized(threads) {
+				for (LoaderThread t : threads)
+					t.start();
+			}
+			started = true;
+		}
+	}
+	
+	public boolean isStarted() {
+		synchronized(started) {
+			return started;
+		}
+	}
+	public boolean isFinished() {
+		synchronized(finished) {
+			return finished;
+		}
+	}
+	
+	public void interrupt() {
+		synchronized(jobs) {
+			jobs.clear();  // prevent the threads from picking up new jobs
+		}
+	}
+	
+	private int countWaiting() {
+		synchronized(jobs) {
+			return jobs.size();
 		}
 	}
 	
 	private class LoaderThread extends Thread {
+		
+		private Boolean runningAJob = false;
+		
 		@Override
-		public void run() {				
-			while (getStats().getWaiting() > 0) {
-				LoadJobEntry entry = pickJobToRun();
-				if (entry != null)
-					runJob(entry);
-				else
+		public void run() {
+			// WARNING: This thread will hang if 'getStats' is called in it!
+			while (countWaiting() > 0) {
+				LoadJobEntry chosenEntry = null;
+				synchronized(jobs) {
+					synchronized(runningAJob) {
+						for (LoadJobEntry entry : jobs) {
+							if (entry.getJob().isReady() &&
+									entry.getResult() == null && entry.getError() == null) {
+
+								jobs.remove(entry);
+								chosenEntry = entry;
+								runningAJob = true;
+								break;
+							}
+						}
+					}
+				}
+				
+				if (chosenEntry != null) {
+					try {
+						Object result = chosenEntry.getJob().call();
+						
+						synchronized(nJobsDone) {
+							synchronized(runningAJob) {
+								chosenEntry.setResult(result);
+								
+								nJobsDone++;
+								runningAJob = false;
+							}
+						}
+					} catch (Exception e) {
+						synchronized(nJobsError) {
+							synchronized(runningAJob) {
+								
+								if (errorQueue != null)
+									errorQueue.pushError(e);
+								
+								chosenEntry.setError(new ExecutionException(e));
+								
+								nJobsError++;
+								runningAJob = false;
+							}
+						}
+					}
+				}
+				else {
 					try {
 						Thread.sleep(1000);
 					} catch (InterruptedException e) {
 						logger.error(e.getMessage(), e);
 					}
+				}
 			}
 			
-			if (countThreadsAlive() <= 1)  // am I the last worker thread?
-				if (runWhenDone != null)
-					runWhenDone.run();
+			markJobless(this);
+		}
+
+		public boolean isRunningAJob() {
+			synchronized(runningAJob) {
+				return runningAJob;
+			}
 		}
 	}
 	
@@ -136,42 +215,6 @@ public class Loader {
 	}
 	public void setErrorQueue(ErrorQueue errorQueue) {
 		this.errorQueue = errorQueue;
-	}
-	
-	private List<LoaderThread> threads = new ArrayList<LoaderThread>();
-	
-	public Loader(int nConcurrent) {
-		
-		int i;
-		synchronized(threads) {
-			for (i = 0; i < nConcurrent; i++)
-				threads.add(new LoaderThread());
-		}
-	}
-	
-	public void start() {
-		synchronized(threads) {
-			for (LoaderThread t : threads)
-				t.start();
-		}
-	}
-	
-	public void interrupt() {
-		synchronized(jobs) {
-			jobs.clear();  // prevent the threads from picking up new jobs
-		}
-	}
-	
-	public int countThreadsAlive() {
-
-		int count = 0;
-		synchronized(threads) {
-			for (LoaderThread t : threads) {
-				if (t.isAlive())
-					count++;
-			}
-		}
-		return count;
 	}
 	
 	public <T> Future<T> add(LoadJob<T> job) {
@@ -191,10 +234,10 @@ public class Loader {
 
 			@Override
 			public T get() throws InterruptedException, ExecutionException {
-				
+
 				while (entry.getResult() == null) {
 					if (entry.getError() != null)
-						throw new ExecutionException(entry.getError());
+						throw entry.getError();
 					
 					Thread.sleep(100);
 				}
@@ -207,13 +250,17 @@ public class Loader {
 				
 				long t0 = System.currentTimeMillis();
 				
-				while (entry.getResult() == null &&
-						(System.currentTimeMillis() - t0) < unit.toMillis(n)) {
+				while (entry.getResult() == null) {
+				
+					if ((System.currentTimeMillis() - t0) > unit.toMillis(n))
+						throw new TimeoutException();
+					
 					if (entry.getError() != null)
-						throw new ExecutionException(entry.getError());
+						throw entry.getError();
 					
 					Thread.sleep(unit.toMillis(1));
 				}
+
 				return (T)entry.getResult();
 			}
 

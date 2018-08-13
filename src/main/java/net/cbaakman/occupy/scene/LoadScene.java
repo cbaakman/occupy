@@ -1,4 +1,4 @@
-package net.cbaakman.occupy.render;
+package net.cbaakman.occupy.scene;
 
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
@@ -20,10 +20,13 @@ import net.cbaakman.occupy.errors.ShaderLinkError;
 import net.cbaakman.occupy.load.LoadStats;
 import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector2f;
+import net.cbaakman.occupy.render.Shader;
+import net.cbaakman.occupy.render.Vertex;
+import net.cbaakman.occupy.render.VertexBuffer;
 
-public class LoadGLEventListener implements GLEventListener {
+public class LoadScene extends Scene {
 	
-	private static Logger logger = Logger.getLogger(LoadGLEventListener.class);
+	private static Logger logger = Logger.getLogger(LoadScene.class);
 
 	private Loader loader;
 	private Client client;
@@ -32,7 +35,7 @@ public class LoadGLEventListener implements GLEventListener {
 	private static float LOAD_BAR_HEIGHT = 20.0f;
 	private static float LOAD_BAR_EDGE = 3.0f;
 	
-	public LoadGLEventListener(Loader loader, Client client) {
+	public LoadScene(Loader loader, Client client) {
 		this.loader = loader;
 		this.client = client;
 	}
@@ -192,9 +195,5 @@ public class LoadGLEventListener implements GLEventListener {
         catch (GL3Error e) {
 			client.getErrorQueue().pushError(e);
         }
-	}
-
-	@Override
-	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
 	}
 }
