@@ -91,13 +91,14 @@ public abstract class Server {
 	}
 
 	public void run() throws InitError {
+		
+		running = true;
 
 		initCommunication();
 		
 		long ticks0 = System.currentTimeMillis(),
 			 ticks;
 		float dt;
-		running = true;
 		
 		try {
 			while (running) {
