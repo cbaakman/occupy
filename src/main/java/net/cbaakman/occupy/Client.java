@@ -25,7 +25,6 @@ import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
 
 import java.security.InvalidKeyException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import net.cbaakman.occupy.authenticate.Credentials;
 import net.cbaakman.occupy.communicate.Connection;
@@ -62,7 +61,7 @@ public abstract class Client {
 	private PlayerRecord loggedInPlayerRecord = null;
 	
 	/**
-	 * Executes jobs that have to be executed in he main thread, where openGL runs.
+	 * Executes jobs that have to be executed in the main thread, where openGL runs.
 	 */
 	private JobScheduler mainThreadScheduler = new JobScheduler();
 	
