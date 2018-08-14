@@ -45,7 +45,7 @@ public abstract class Server {
 	final static Logger logger = Logger.getLogger(Server.class);
 	
 	private ErrorQueue errorQueue = new ErrorQueue();
-	private boolean running;
+	private volatile boolean running;
 	
 	@Data
 	private class ClientRecord {

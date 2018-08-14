@@ -25,6 +25,7 @@ import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
 
 import java.security.InvalidKeyException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import net.cbaakman.occupy.authenticate.Credentials;
 import net.cbaakman.occupy.communicate.Connection;
@@ -65,16 +66,13 @@ public abstract class Client {
 	 */
 	private JobScheduler mainThreadScheduler = new JobScheduler();
 	
-	private Loader loader;
-	private boolean running;
+	private volatile boolean running;
 	
 	protected ClientConfig config;
 	
 	public Client(ClientConfig config) {
 				
 		this.config = config;
-		
-		loader = new Loader(config.getLoadConcurrency());
 	}
 	
 	public static String getVersion() {
@@ -218,6 +216,8 @@ public abstract class Client {
 			logger.debug("making " + config.getDataDir());
 			config.getDataDir().toFile().mkdirs();
 		}
+		
+		Loader loader = new Loader(config.getLoadConcurrency());
 		
 		resourceManager.addAllJobsTo(loader);
 
