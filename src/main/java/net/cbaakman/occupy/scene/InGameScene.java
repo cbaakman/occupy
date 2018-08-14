@@ -57,7 +57,7 @@ public class InGameScene extends Scene {
 	}
 
 	@Override
-	public void display(GLAutoDrawable drawable) {
+	public synchronized void display(GLAutoDrawable drawable) {
 		GL3 gl3 = drawable.getGL().getGL3();
 		
         try {	        
@@ -127,7 +127,7 @@ public class InGameScene extends Scene {
 		}
 	}
 	@Override
-	public void onUpdateFromServer(Update update) {
+	public synchronized void onUpdateFromServer(Update update) {
 		
 		Updatable updatable = updatables.get(update.getObjectID());
 			
@@ -165,7 +165,7 @@ public class InGameScene extends Scene {
 			   CAMERA_MIN_Y = 25.0f;
 
 	@Override
-	public void mouseWheelMoved(MouseWheelEvent e) {
+	public synchronized void mouseWheelMoved(MouseWheelEvent e) {
 		int notches = e.getWheelRotation();
 		
 		if (notches < 0 && camera.getPosition().getY() <= CAMERA_MIN_Y)
@@ -178,7 +178,7 @@ public class InGameScene extends Scene {
 		camera.getPosition().move(vOut);
 	}
 	
-	public void update(float dt) {
+	public synchronized void update(float dt) {
 		ClientConfig config = client.getConfig();
 		
 		if (isKeyDown(config.getKeyCameraForward()))
