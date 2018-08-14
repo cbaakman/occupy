@@ -2,7 +2,7 @@ package net.cbaakman.occupy;
 
 public abstract class WhileThread extends Thread {
 
-	private boolean running;
+	private volatile boolean running;
 	
 	public WhileThread(String name) {
 		super(name);
