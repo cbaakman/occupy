@@ -267,6 +267,7 @@ public abstract class Client {
         centerFrame(frame);
         
         glCanvas.requestFocusInWindow();
+        frame.toFront();
 	}
 	
 	protected void update(float dt) throws CommunicationError, RenderError, InitError {
