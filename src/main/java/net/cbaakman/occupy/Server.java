@@ -9,6 +9,7 @@ import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
 import java.security.InvalidKeyException;
 import java.util.Date;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import javax.crypto.BadPaddingException;
@@ -253,18 +254,23 @@ public abstract class Server {
 		if (updatable == null)
 			return;
 		
-		try {
-			Field field = update.getObjectClass().getField(update.getFieldID());
+		for (Entry<String, Object> entry : update.getFieldValues().entrySet()) {
+			String fieldId = entry.getKey();
+			Object value = entry.getValue();
 			
-			if (field.isAnnotationPresent(ClientToServer.class)) {
-			
-				field.setAccessible(true);
-				field.set(updatable, update.getValue());
+			try {
+				Field field = update.getObjectClass().getField(fieldId);
+				
+				if (field.isAnnotationPresent(ClientToServer.class)) {
+				
+					field.setAccessible(true);
+					field.set(updatable, value);
+				}
+				
+			} catch (NoSuchFieldException | SecurityException | IllegalArgumentException |
+					IllegalAccessException e) {
+				throw new SeriousError(e);
 			}
-			
-		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException |
-				IllegalAccessException e) {
-			throw new SeriousError(e);
 		}
 	}
 	
@@ -296,6 +302,8 @@ public abstract class Server {
 				
 				Class<? extends Updatable> objectClass = updatable.getClass();
 				
+				Update update = new Update(objectClass, objectId);
+				
 				for (Field field : updatable.getDeclaredFieldsSinceUpdatable()) {
 					
 					if (field.isAnnotationPresent(ServerToClient.class) ||
@@ -305,15 +313,14 @@ public abstract class Server {
 						field.setAccessible(true);
 						
 						try {
-							Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
-
-							sendPacket(clientId, new Packet(PacketType.UPDATE, update));
+							update.setValue(field.getName(), field.get(updatable));
 							
 						} catch (IllegalArgumentException | IllegalAccessException e) {
 							throw new SeriousError(e);
 						}
 					}
 				}
+				sendPacket(clientId, new Packet(PacketType.UPDATE, update));
 			}
 		}
 		

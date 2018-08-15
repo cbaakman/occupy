@@ -3,6 +3,7 @@ package net.cbaakman.occupy.scene;
 import java.awt.event.MouseWheelEvent;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
@@ -161,20 +162,25 @@ public class InGameScene extends Scene {
 			}
 		}
 		
-		try {
-			Field field = updatable.getDeclaredFieldSinceUpdatable(update.getFieldID());
-			
-			if (field.isAnnotationPresent(ServerToClient.class) ||
-					field.isAnnotationPresent(ClientToServer.class) &&
-					!updatable.mayBeUpdatedBy(playerRecord)) {
-			
-				field.setAccessible(true);
-				field.set(updatable, update.getValue());
+		for (Entry<String, Object> entry : update.getFieldValues().entrySet()) {
+			String fieldId = entry.getKey();
+			Object value = entry.getValue();
+
+			try {
+				Field field = updatable.getDeclaredFieldSinceUpdatable(fieldId);
+				
+				if (field.isAnnotationPresent(ServerToClient.class) ||
+						field.isAnnotationPresent(ClientToServer.class) &&
+						!updatable.mayBeUpdatedBy(playerRecord)) {
+				
+					field.setAccessible(true);
+					field.set(updatable, value);
+				}
+				
+			} catch (NoSuchFieldException | SecurityException | IllegalArgumentException |
+					IllegalAccessException e) {
+				client.getErrorQueue().pushError(e);
 			}
-			
-		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException |
-				IllegalAccessException e) {
-			client.getErrorQueue().pushError(e);
 		}
 	}
 	private final static float CAMERA_MOVE_SPEED = 100.0f,
@@ -214,6 +220,8 @@ public class InGameScene extends Scene {
 			
 			Class<? extends Updatable> objectClass = updatable.getClass();
 			
+			Update update = new Update(objectClass, objectId);
+			
 			for (Field field : objectClass.getDeclaredFields()) {
 				
 				if (field.isAnnotationPresent(ClientToServer.class)
@@ -222,18 +230,19 @@ public class InGameScene extends Scene {
 					field.setAccessible(true);
 			
 					try {
-						Update update = new Update(objectClass, objectId, field.getName(), field.get(updatable));
-
-						client.sendPacket(new Packet(PacketType.UPDATE, update));
+						update.setValue(field.getName(), field.get(updatable));
 						
 					} catch (IllegalArgumentException | IllegalAccessException e) {
 						// Must not happen!
 						throw new SeriousError(e);
-						
-					} catch (CommunicationError e) {
-						client.getErrorQueue().pushError(e);
 					}
 				}
+			}
+
+			try {
+				client.sendPacket(new Packet(PacketType.UPDATE, update));
+			} catch (CommunicationError e) {
+				client.getErrorQueue().pushError(e);
 			}
 		}
 	}
