@@ -66,6 +66,9 @@ public class InGameScene extends Scene {
 
 			gl3.glClearDepth(1.0f);
 			GL3Error.check(gl3);
+
+			gl3.glDepthMask(true);
+			GL3Error.check(gl3);
 	        
 	        gl3.glClear(GL3.GL_COLOR_BUFFER_BIT | GL3.GL_DEPTH_BUFFER_BIT);
 			GL3Error.check(gl3);
@@ -78,29 +81,43 @@ public class InGameScene extends Scene {
 									  0.1f, 1000.0f);
 
 			float[] modelViewMatrix = camera.getMatrix();
+
+			gl3.glDisable(GL3.GL_BLEND);
+			GL3Error.check(gl3);
+			
+			gl3.glEnable(GL3.GL_CULL_FACE);
+			GL3Error.check(gl3);
+
+			gl3.glEnable(GL3.GL_DEPTH_TEST);
+			GL3Error.check(gl3);
+
+			gl3.glDepthMask(true);
+			GL3Error.check(gl3);
 			
 			for (Updatable updatable : updatables.getAll()) {
 				if (updatable instanceof Entity) {
 					Entity entity = (Entity)updatable;
-					renderEntity(gl3, projectionMatrix, modelViewMatrix, entity);
+
+					EntityRenderer renderer = renderRegistry.getForEntity(entity.getClass());
+
+					renderer.renderOpaque(gl3, projectionMatrix, modelViewMatrix, entity);
 				}
 			}
 			
-		} catch (GL3Error e) {
-			client.getErrorQueue().pushError(e);
-		}
-	}
-	
-	private <T extends Entity> void renderEntity(GL3 gl3, float[] projectionMatrix,
-														  float[] modelViewMatrix,
-														  T entity)
-							  throws GL3Error {
-		try {
-			EntityRenderer<T> renderer = (EntityRenderer<T>)renderRegistry.getForEntity(entity.getClass());
+			gl3.glDepthMask(false);
+			GL3Error.check(gl3);
+			
+			for (Updatable updatable : updatables.getAll()) {
+				if (updatable instanceof Entity) {
+					Entity entity = (Entity)updatable;
 
-			renderer.renderOpaque(gl3, projectionMatrix, modelViewMatrix, entity);
-			renderer.renderTransparent(gl3, projectionMatrix, modelViewMatrix, entity);
-		} catch (KeyError e) {
+					EntityRenderer renderer = renderRegistry.getForEntity(entity.getClass());
+
+					renderer.renderTransparent(gl3, projectionMatrix, modelViewMatrix, entity);
+				}
+			}
+			
+		} catch (GL3Error | KeyError e) {
 			client.getErrorQueue().pushError(e);
 		}
 	}

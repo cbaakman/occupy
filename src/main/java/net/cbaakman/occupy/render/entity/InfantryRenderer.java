@@ -116,14 +116,6 @@ public class InfantryRenderer extends EntityRenderer<Infantry> {
 	public void renderOpaque(GL3 gl3, float[] projectionMatrix,
 									  float[] modelViewMatrix, Infantry infantry)
 			throws GL3Error {
-		gl3.glDisable(GL3.GL_BLEND);
-		GL3Error.check(gl3);
-		
-		gl3.glEnable(GL3.GL_CULL_FACE);
-		GL3Error.check(gl3);
-
-		gl3.glEnable(GL3.GL_DEPTH_TEST);
-		GL3Error.check(gl3);
         
         gl3.glUseProgram(shaderProgram);
 		GL3Error.check(gl3);
