@@ -34,6 +34,24 @@ public class TestRun {
 		final Server server = new NetworkServer(serverConfig);
 		final Client client = new NetworkClient(clientConfig);
 		
+		// Place some random units
+		int i;
+		float minX = -100.0f, maxX = 100.0f,
+			  minZ = -100.0f, maxZ = 100.0f,
+			  x, z;
+		Random random = new Random();
+		for (i = 0; i < 100; i++) {
+			Unit unit = new Infantry(server);
+			x = minX + random.nextFloat() * (maxX - minX);
+			z = minZ + random.nextFloat() * (maxZ - minZ);
+			unit.setPosition(new Vector3f(x, 0.0f, z));
+			x = minX + random.nextFloat() * (maxX - minX);
+			z = minZ + random.nextFloat() * (maxZ - minZ);
+			unit.setCurrentOrder(new MoveOrder(new Vector3f(x, 0.0f, z)));
+			
+			server.addUpdatable(unit);
+		}
+		
 		Thread serverThread = new Thread("server") {
 			public void run() {
 				try {
@@ -48,6 +66,7 @@ public class TestRun {
 			}
 		};
 		serverThread.start();
+		
 		
 		Thread clientThread = new Thread("client") {
 			public void run() {
@@ -77,24 +96,6 @@ public class TestRun {
 			server.stop();
 			
 			e.printStackTrace();
-		}
-		
-		// Place some random units
-		int i;
-		float minX = -100.0f, maxX = 100.0f,
-			  minZ = -100.0f, maxZ = 100.0f,
-			  x, z;
-		Random random = new Random();
-		for (i = 0; i < 100; i++) {
-			Unit unit = new Infantry(server);
-			x = minX + random.nextFloat() * (maxX - minX);
-			z = minZ + random.nextFloat() * (maxZ - minZ);
-			unit.setPosition(new Vector3f(x, 0.0f, z));
-			x = minX + random.nextFloat() * (maxX - minX);
-			z = minZ + random.nextFloat() * (maxZ - minZ);
-			unit.setCurrentOrder(new MoveOrder(new Vector3f(x, 0.0f, z)));
-			
-			server.addUpdatable(unit);
 		}
 	}
 	
