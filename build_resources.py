@@ -12,6 +12,18 @@ from zipfile import ZipFile
 windows_drives = list(ascii_uppercase)
 
 
+def find_inkscape():
+    for drive in windows_drives:
+        for path in glob("%s:\\Program Files\\Inkscape\\inkscape.exe" % drive):
+            return path
+
+    for path in ["/usr/bin/inkscape", "/usr/local/bin/inkscape"]:
+        if os.path.isfile(path):
+            return path
+
+    raise FileNotFoundError("cannot find inkscape executable, please install")
+
+
 def find_gimp():
     for drive in windows_drives:
         for path in glob("%s:\\Program Files*\\GIMP 2\\bin\\gimp-console-2.*.exe" % drive):
@@ -71,6 +83,7 @@ def mkdirs(path):
 blender_exe = find_blender()
 xml_exporter = find_xml_exporter()
 gimp_exe = find_gimp()
+inkscape_exe = find_inkscape()
 
 
 # Build directories if not present:
@@ -84,8 +97,7 @@ mkdirs(map_test_dir)
 
 
 # Build meshes:
-mesh_list = [(os.path.join('art', 'mesh', 'infantry.blend'), 'infantry', os.path.join(mesh_dir, 'infantry.xml')),
-             (os.path.join('art', 'mesh', 'terrain.blend'), 'terrain', os.path.join(map_test_dir, 'terrain.xml'))]
+mesh_list = [(os.path.join('art', 'mesh', 'infantry.blend'), 'infantry', os.path.join(mesh_dir, 'infantry.xml'))]
 for blend_path, name, xml_path in mesh_list:
     r = subprocess.call([
         blender_exe, blend_path, '--background', '--python', xml_exporter,
@@ -100,8 +112,7 @@ for blend_path, name, xml_path in mesh_list:
 
 # Build images:
 image_list = [(os.path.join('art', 'image', 'infantry.xcf'), 'base', os.path.join(image_dir, 'infantry.png')),
-              (os.path.join('art', 'image', 'infantry.xcf'), 'color', os.path.join(image_dir, 'infantry_color.png')),
-              (os.path.join('art', 'image', 'green.xcf'), 'base', os.path.join(map_test_dir, 'green.png'))]
+              (os.path.join('art', 'image', 'infantry.xcf'), 'color', os.path.join(image_dir, 'infantry_color.png'))]
 error_path = tempfile.mktemp()
 script_str = """
 import gimpfu
@@ -137,14 +148,17 @@ if os.path.isfile(error_path):
     os.remove(error_path)
     raise Exception(message)
 
-# Store the map components in an archive:
-map_contents = [os.path.join(map_test_dir, 'terrain.xml'),
-                os.path.join(map_test_dir, 'green.png')]
-map_archive = os.path.join(map_test_dir, 'testmap.zip')
-with ZipFile(map_archive, 'w') as z:
-    for path in map_contents:
-        z.write(path, os.path.basename(path))
-        os.remove(path)
-    z.writestr('info.txt', "name: test")
+
+# Build svg images:
+svg_list = [(os.path.join('art', 'image', 'cursor_default.svg'), os.path.join(image_dir, 'cursor_default.png'))]
+for svg_path, png_path in svg_list:
+    r = subprocess.call([inkscape_exe,
+                         '--file=%s' % svg_path,
+                         '--export-area-page', '--export-png=%s' % png_path])
+    if r != 0:
+        sys.exit(r)
+
+    if not os.path.isfile(png_path):
+        raise RuntimeError("%s was not generated" % png_path)
 
 print("\nAll resources have been built successfully.")

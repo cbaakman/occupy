@@ -1,11 +1,17 @@
 package net.cbaakman.occupy;
 
+import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Image;
+import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -245,6 +251,11 @@ public abstract class Client {
 
 		glCanvas.setSize(config.getScreenWidth(), config.getScreenHeight());
 		
+		Toolkit t = Toolkit.getDefaultToolkit();
+	    Image i = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+	    Cursor noCursor = t.createCustomCursor(i, new Point(0, 0), "none"); 
+		glCanvas.setCursor(noCursor);
+		
 		switchScene(new LoadScene(loader, this));
 		
 		loader.start();
@@ -377,6 +388,16 @@ public abstract class Client {
 					glCanvas.removeMouseWheelListener(mouseWheelListener);
 				}
 				glCanvas.addMouseWheelListener(scene);
+				
+				for (MouseMotionListener mouseMotionListener : glCanvas.getMouseMotionListeners()) {
+					glCanvas.removeMouseMotionListener(mouseMotionListener);
+				}
+				glCanvas.addMouseMotionListener(scene);
+				
+				for (MouseListener mouseListener : glCanvas.getMouseListeners()) {
+					glCanvas.removeMouseListener(mouseListener);
+				}
+				glCanvas.addMouseListener(scene);
 				
 				currentScene = scene;
 			}

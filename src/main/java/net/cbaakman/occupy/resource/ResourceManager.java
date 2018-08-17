@@ -51,6 +51,7 @@ public class ResourceManager {
 	}
 
 	public void addAllJobsTo(Loader loader) {
+		addImageJobTo(loader, "cursor_default");
 		addImageJobTo(loader, "infantry");
 		addMeshJobTo(loader, "infantry");
 	}

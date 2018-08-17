@@ -1,10 +1,13 @@
 package net.cbaakman.occupy.scene;
 
+import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
+import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
 
@@ -12,6 +15,11 @@ import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.math.FloatUtil;
 import com.jogamp.opengl.math.Quaternion;
+import com.jogamp.opengl.util.awt.ImageUtil;
+import com.jogamp.opengl.util.texture.Texture;
+import com.jogamp.opengl.util.texture.TextureData;
+import com.jogamp.opengl.util.texture.TextureIO;
+import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
 
 import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.SynchronizedPool;
@@ -26,11 +34,15 @@ import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.KeyError;
 import net.cbaakman.occupy.errors.SeriousError;
+import net.cbaakman.occupy.errors.ShaderCompileError;
+import net.cbaakman.occupy.errors.ShaderLinkError;
 import net.cbaakman.occupy.game.Camera;
 import net.cbaakman.occupy.game.Entity;
 import net.cbaakman.occupy.game.Infantry;
 import net.cbaakman.occupy.game.PlayerRecord;
+import net.cbaakman.occupy.math.Vector2f;
 import net.cbaakman.occupy.math.Vector3f;
+import net.cbaakman.occupy.render.GLSprite2DRenderer;
 import net.cbaakman.occupy.render.entity.EntityRenderer;
 import net.cbaakman.occupy.render.entity.InfantryRenderer;
 import net.cbaakman.occupy.render.entity.RenderRegistry;
@@ -47,6 +59,11 @@ public class InGameScene extends Scene {
 	private Camera camera = new Camera();
 
 	private SynchronizedPool<UUID, Updatable> updatables = new SynchronizedPool<UUID, Updatable>();
+	
+	private Texture cursorTexture = null;
+	private GLSprite2DRenderer cursorRenderer = null;
+	private Vector2f cursorPosition = new Vector2f(Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY);
+	private volatile boolean mouseInCanvas = false;
 	
 	public InGameScene(Client client, PlayerRecord playerRecord) {
 		this.client = client;
@@ -108,6 +125,9 @@ public class InGameScene extends Scene {
 			gl3.glDepthMask(false);
 			GL3Error.check(gl3);
 			
+			gl3.glEnable(GL3.GL_BLEND);
+			GL3Error.check(gl3);
+			
 			for (Updatable updatable : updatables.getAll()) {
 				if (updatable instanceof Entity) {
 					Entity entity = (Entity)updatable;
@@ -118,7 +138,21 @@ public class InGameScene extends Scene {
 				}
 			}
 			
-		} catch (GL3Error | KeyError e) {
+			FloatUtil.makeOrtho(projectionMatrix, 0, true,
+								0.0f, (float)drawable.getSurfaceWidth(),
+								(float)drawable.getSurfaceHeight(), 0.0f,
+								-1.0f, 1.0f);
+			
+			gl3.glBlendFunc(GL3.GL_SRC_ALPHA, GL3.GL_ONE_MINUS_SRC_ALPHA);
+			GL3Error.check(gl3);
+			
+			if (mouseInCanvas) {
+				cursorRenderer.set(gl3, cursorPosition, 16.0f,
+								   0.0f, 1.0f, 1.0f, 0.0f);
+				cursorRenderer.render(gl3, projectionMatrix);
+			}
+			
+		} catch (GL3Error | KeyError | IndexOutOfBoundsException  e) {
 			client.getErrorQueue().pushError(e);
 		}
 	}
@@ -128,6 +162,10 @@ public class InGameScene extends Scene {
 		GL3 gl3 = drawable.getGL().getGL3();
 		
 		try {
+			cursorRenderer.cleanUp(gl3);
+			
+			cursorTexture.destroy(gl3);
+			
 			renderRegistry.cleanUpAll(gl3);
 		} catch (GL3Error e) {
 			client.getErrorQueue().pushError(e);
@@ -140,7 +178,31 @@ public class InGameScene extends Scene {
 		
 		try {
 			renderRegistry.registerForEntity(Infantry.class, new InfantryRenderer(client, gl3));
-		} catch (GL3Error | SeriousError e) {
+			
+			BufferedImage cursorImage;
+			try {
+				cursorImage = client.getResourceManager().getImage("cursor_default");
+			} catch (KeyError | InterruptedException | ExecutionException e) {
+				throw new SeriousError(e);
+			}
+			TextureData textureData = AWTTextureIO.newTextureData(gl3.getGLProfile(), cursorImage, true);
+			if (textureData.getMustFlipVertically()) {
+				ImageUtil.flipImageVertically(cursorImage);
+				textureData = AWTTextureIO.newTextureData(gl3.getGLProfile(), cursorImage, true);
+			}
+
+			cursorTexture = TextureIO.newTexture(gl3, textureData);
+			cursorTexture.setTexParameterf(gl3, GL3.GL_TEXTURE_MIN_FILTER, GL3.GL_NEAREST);
+			cursorTexture.setTexParameterf(gl3, GL3.GL_TEXTURE_MAG_FILTER, GL3.GL_NEAREST);
+			cursorTexture.setTexParameterf(gl3, GL3.GL_TEXTURE_WRAP_S, GL3.GL_REPEAT);
+			cursorTexture.setTexParameterf(gl3, GL3.GL_TEXTURE_WRAP_T, GL3.GL_REPEAT);
+
+			cursorRenderer = new GLSprite2DRenderer(gl3);
+			cursorRenderer.setTexture(cursorTexture);
+			
+		} catch (GL3Error | SeriousError | ShaderCompileError | ShaderLinkError e) {
+			logger.error(e.getMessage(), e);
+			
 			client.getErrorQueue().pushError(e);
 		}
 	}
@@ -188,8 +250,8 @@ public class InGameScene extends Scene {
 			   CAMERA_MIN_Y = 25.0f;
 
 	@Override
-	public synchronized void mouseWheelMoved(MouseWheelEvent e) {
-		int notches = e.getWheelRotation();
+	public synchronized void mouseWheelMoved(MouseWheelEvent event) {
+		int notches = event.getWheelRotation();
 		
 		if (notches < 0 && camera.getPosition().getY() <= CAMERA_MIN_Y)
 		return;
@@ -200,6 +262,27 @@ public class InGameScene extends Scene {
 		
 		camera.getPosition().move(vOut);
 	}
+
+	
+	@Override
+	public void mouseMoved(MouseEvent event) {
+		cursorPosition = new Vector2f((float)event.getX(), (float)event.getY());
+	}
+
+	@Override
+	public void mouseDragged(MouseEvent event) {
+		cursorPosition = new Vector2f((float)event.getX(), (float)event.getY());
+	}
+
+	@Override
+	public void mouseEntered(MouseEvent evt) {
+		mouseInCanvas = true;
+    }
+
+	@Override
+    public void mouseExited(MouseEvent evt) {
+		mouseInCanvas = false;
+    }
 	
 	public synchronized void update(float dt) {
 		ClientConfig config = client.getConfig();

@@ -12,7 +12,9 @@ import com.jogamp.common.nio.Buffers;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.math.FloatUtil;
 
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Setter;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.SeriousError;
 
@@ -23,8 +25,13 @@ public class VertexBuffer<T extends Vertex> {
 	
 	private static VertexBuffer currentMapped = null;
 
+	@Setter(AccessLevel.NONE)
 	private int glHandle = 0;
+
+	@Setter(AccessLevel.NONE)
 	private int vertexCount;
+
+	@Setter(AccessLevel.NONE)
 	private Class<T> vertexClass;
 	
 	private VertexBuffer(int vertexCount, Class<T> vertexClass) {
