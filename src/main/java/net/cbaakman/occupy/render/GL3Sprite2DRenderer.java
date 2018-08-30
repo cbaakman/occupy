@@ -1,18 +1,28 @@
 package net.cbaakman.occupy.render;
 
 import java.nio.FloatBuffer;
+import java.util.Set;
 
 import com.jogamp.opengl.GL3;
+import com.jogamp.opengl.util.glsl.ShaderProgram;
 import com.jogamp.opengl.util.texture.Texture;
 
 import net.cbaakman.occupy.annotations.VertexAttrib;
 import net.cbaakman.occupy.errors.GL3Error;
+import net.cbaakman.occupy.errors.InitError;
+import net.cbaakman.occupy.errors.NotReadyError;
 import net.cbaakman.occupy.errors.SeriousError;
-import net.cbaakman.occupy.errors.ShaderCompileError;
-import net.cbaakman.occupy.errors.ShaderLinkError;
+import net.cbaakman.occupy.load.LoadRecord;
+import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector2f;
+import net.cbaakman.occupy.resource.Resource;
+import net.cbaakman.occupy.resource.ResourceLinker;
+import net.cbaakman.occupy.resource.ResourceLocator;
+import net.cbaakman.occupy.resource.ResourceManager;
+import net.cbaakman.occupy.resource.VertexBufferResource;
+import net.cbaakman.occupy.resource.WaitResource;
 
-public class GLSprite2DRenderer {
+public class GL3Sprite2DRenderer {
 	
 	private static class SpriteVertex extends Vertex {
 		@VertexAttrib(index=0)
@@ -28,34 +38,26 @@ public class GLSprite2DRenderer {
 	}
 
 	
-	private static final String VERTEX_SHADER_SRC = "#version 150\n" +
-										      		"uniform mat4 projectionMatrix;" + 
-										      		"in vec2 position;" + 
-										      		"in vec2 texCoord;" +
-										      		"out vec2 texCoords;" +
-										      		"void main() { " +
-										      		"  texCoords = texCoord;" +
-										      		"  gl_Position = projectionMatrix * vec4(position.x, position.y, 0.0, 1.0);" +
-										      		"}",
-						        FRAGMENT_SHADER_SRC = "#version 150\n" +
-						        					  "uniform sampler2D spriteTexture;" +
-						        					  "in vec2 texCoords;" + 
-										      		  "out vec4 fragColor;" + 
-										        	  "void main() { fragColor = texture(spriteTexture, texCoords); }";
-	
 	private VertexBuffer<SpriteVertex> vbo;
-	private int shaderProgram;
+	private ShaderProgram shaderProgram;
 	private Texture texture = null;
 	
-	public GLSprite2DRenderer(GL3 gl3) throws GL3Error, ShaderCompileError, ShaderLinkError {
-		vbo = VertexBuffer.create(gl3, SpriteVertex.class, 4, GL3.GL_DYNAMIC_DRAW);
+	public void orderFrom(ResourceManager resourceManager) {
 		
-		shaderProgram = Shader.createProgram(gl3, VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
-	}
-	
-	public void cleanUp(GL3 gl3) throws GL3Error {
-		vbo.cleanup(gl3);
-		Shader.deleteProgram(gl3, shaderProgram);
+		LoadRecord<ShaderProgram> asyncShaderProgram = ResourceLinker.addShaderJobs(resourceManager,
+							ResourceLocator.getVertexShaderPath("sprite2d"),
+							ResourceLocator.getFragmentShaderPath("sprite2d"));
+		
+		LoadRecord<VertexBuffer<SpriteVertex>> asyncVBO = resourceManager.submit(
+				new VertexBufferResource<SpriteVertex>(SpriteVertex.class, 4, GL3.GL_DYNAMIC_DRAW));
+		
+		resourceManager.submit(new WaitResource(asyncShaderProgram, asyncVBO){
+			@Override
+			protected void run(GL3 gl3) throws NotReadyError, InitError {
+				vbo = asyncVBO.get();
+				shaderProgram = asyncShaderProgram.get();
+			}
+		});
 	}
 	
 	/**
@@ -89,10 +91,9 @@ public class GLSprite2DRenderer {
 	
 	public void render(GL3 gl3, float[] projectionMatrix) throws GL3Error {
 
-		gl3.glUseProgram(shaderProgram);
-		GL3Error.check(gl3);
+		shaderProgram.useProgram(gl3, true);
 		
-		int projectionMatrixLocation = gl3.glGetUniformLocation(shaderProgram, "projectionMatrix");
+		int projectionMatrixLocation = gl3.glGetUniformLocation(shaderProgram.program(), "projectionMatrix");
 		if (projectionMatrixLocation == -1)
 			GL3Error.throwMe(gl3);
 
@@ -107,7 +108,7 @@ public class GLSprite2DRenderer {
         gl3.glActiveTexture(GL3.GL_TEXTURE0);
 		GL3Error.check(gl3);
         
-        int textureLocation = gl3.glGetUniformLocation(shaderProgram, "spriteTexture");
+        int textureLocation = gl3.glGetUniformLocation(shaderProgram.program(), "texture");
         if (textureLocation == -1)
         	GL3Error.throwMe(gl3);
         
@@ -120,7 +121,6 @@ public class GLSprite2DRenderer {
 			texture.disable(gl3);
 		}
 
-		gl3.glUseProgram(0);
-		GL3Error.check(gl3);
+		shaderProgram.useProgram(gl3, false);
 	}
 }

@@ -4,10 +4,9 @@ import java.awt.Color;
 import java.util.Objects;
 
 import lombok.Data;
-import net.cbaakman.occupy.Identifier;
 
 @Data
-public class FontStyle implements Identifier {
+public class FontStyle {
 	
 	private float size = 12.0f;
 	

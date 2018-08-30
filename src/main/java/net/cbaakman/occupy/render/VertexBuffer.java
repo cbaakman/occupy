@@ -67,7 +67,7 @@ public class VertexBuffer<T extends Vertex> {
 		return vbo;
 	}
 	
-	public void cleanup(GL3 gl3) throws GL3Error {
+	public void dispose(GL3 gl3) throws GL3Error {
 		gl3.glDeleteBuffers(1, new int[]{glHandle}, 0);
 
 		GL3Error.check(gl3);

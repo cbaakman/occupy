@@ -66,7 +66,13 @@ public class TestRun {
 			}
 		};
 		serverThread.start();
-		
+
+		// Start the client after 1 second, allow the server to initialize.
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		
 		Thread clientThread = new Thread("client") {
 			public void run() {
@@ -80,8 +86,8 @@ public class TestRun {
 			}
 		};
 		clientThread.start();
-		
-		// Log in after 1 second, allow the server to initialize.
+
+		// Login after 1 second, allow the client to initialize.
 		try {
 			Thread.sleep(1000);
 		} catch (InterruptedException e) {
@@ -113,8 +119,7 @@ public class TestRun {
 			file.delete();
 	}
 
-	public static void main(String[] args)
-			throws IOException {
+	public static void main(String[] args) {
 
 		ServerConfig serverConfig = new ServerConfig();
 		ClientConfig clientConfig = new ClientConfig();
@@ -123,8 +128,6 @@ public class TestRun {
 			int serverPort = 5000;
 			serverConfig.setListenPort(serverPort);
 			serverConfig.setDataDir(createDataDirectory("server"));
-			File mapFile = new File(serverConfig.getDataDir().toFile(), "map.zip");
-			Files.copy(TestRun.class.getResourceAsStream("/map/testmap.zip"), mapFile.toPath());
 			File passwdFile = new File(serverConfig.getDataDir().toFile(), "passwd");
 			(new Authenticator(passwdFile)).add(loginCredentials);
 			
@@ -132,8 +135,10 @@ public class TestRun {
 			clientConfig.setDataDir(createDataDirectory("client"));
 			
 			runWith(serverConfig, clientConfig);
-		}
-		finally {
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
 			removeTree(serverConfig.getDataDir());
 			removeTree(clientConfig.getDataDir());
 		}

@@ -5,7 +5,6 @@ import java.nio.channels.SocketChannel;
 
 import org.apache.log4j.Logger;
 
-import net.cbaakman.occupy.Identifier;
 import net.cbaakman.occupy.Server;
 import net.cbaakman.occupy.communicate.Packet;
 import net.cbaakman.occupy.config.ServerConfig;
@@ -80,7 +79,7 @@ public class NetworkServer extends Server {
 	}
 
 	@Override
-	protected void sendPacket(Identifier clientId, Packet packet) throws CommunicationError {
+	protected void sendPacket(Object clientId, Packet packet) throws CommunicationError {
 		if (clientId instanceof Address)
 			try {
 				udpMessenger.send((Address)clientId, packet);

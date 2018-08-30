@@ -4,10 +4,9 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 
 import lombok.Data;
-import net.cbaakman.occupy.Identifier;
 
 @Data
-public class Address implements Identifier {
+public class Address {
 
 	private InetAddress address;
 	private int port;

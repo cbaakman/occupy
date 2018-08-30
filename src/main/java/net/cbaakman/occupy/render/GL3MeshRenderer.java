@@ -4,9 +4,13 @@ import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+
+import javax.validation.constraints.NotNull;
 
 import org.apache.log4j.Logger;
 
@@ -16,17 +20,25 @@ import com.jogamp.opengl.util.texture.Texture;
 import lombok.Data;
 import net.cbaakman.occupy.annotations.VertexAttrib;
 import net.cbaakman.occupy.errors.GL3Error;
+import net.cbaakman.occupy.errors.InitError;
+import net.cbaakman.occupy.errors.NotReadyError;
 import net.cbaakman.occupy.errors.SeriousError;
+import net.cbaakman.occupy.load.LoadRecord;
+import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector2f;
 import net.cbaakman.occupy.math.Vector3f;
 import net.cbaakman.occupy.mesh.MeshFace;
 import net.cbaakman.occupy.mesh.MeshFactory;
 import net.cbaakman.occupy.mesh.MeshFactory.Subset;
 import net.cbaakman.occupy.mesh.MeshVertex;
+import net.cbaakman.occupy.resource.MeshFactoryResource;
+import net.cbaakman.occupy.resource.Resource;
+import net.cbaakman.occupy.resource.ResourceLocator;
+import net.cbaakman.occupy.resource.ResourceManager;
 
-public class GLMeshRenderer {
+public class GL3MeshRenderer {
 	
-	Logger logger  = Logger.getLogger(GLMeshRenderer.class);
+	Logger logger  = Logger.getLogger(GL3MeshRenderer.class);
 	
 	public static final int POSITION_VERTEX_INDEX = 0,
 							TEXCOORD_VERTEX_INDEX = 1,
@@ -51,11 +63,43 @@ public class GLMeshRenderer {
 		}
 	}
 
-	private MeshFactory meshFactory;
-	private Map<String, Texture> textureMap = new HashMap<String, Texture>();
-	private Map<String, VertexBuffer<MeshRenderVertex>> vboMap = new HashMap<String, VertexBuffer<MeshRenderVertex>>();
+	@NotNull
+	private final MeshFactory meshFactory;
+	private final Map<String, Texture> textureMap = new HashMap<String, Texture>();
+	private final Map<String, VertexBuffer<MeshRenderVertex>> vboMap = new HashMap<String, VertexBuffer<MeshRenderVertex>>();
 	
-	public GLMeshRenderer(GL3 gl3, MeshFactory meshFactory) throws GL3Error {
+	public static LoadRecord<GL3MeshRenderer> submit(ResourceManager resourceManager, String meshName) {
+		LoadRecord<MeshFactory> asyncMesh = resourceManager.submit(new MeshFactoryResource(ResourceLocator.getMeshPath(meshName)));
+		
+		return resourceManager.submit(new Resource<GL3MeshRenderer>() {
+
+			@Override
+			public Set<LoadRecord<?>> getDependencies() {
+				Set<LoadRecord<?>> set = new HashSet<LoadRecord<?>>();
+				set.add(asyncMesh);
+				return set;
+			}
+
+			private GL3MeshRenderer renderer;
+			
+			@Override
+			public GL3MeshRenderer init(GL3 gl3) throws InitError, NotReadyError {
+				try {
+					renderer = new GL3MeshRenderer(gl3, asyncMesh.get());
+					return renderer;
+				} catch (GL3Error e) {
+					throw new InitError(e);
+				}
+			}
+
+			@Override
+			public void dispose(GL3 gl3) {
+				renderer.dispose(gl3);
+			}
+		});
+	}
+	
+	public GL3MeshRenderer(GL3 gl3, MeshFactory meshFactory) throws GL3Error {
 		this.meshFactory = meshFactory;
 		
 		for (Entry<String, Subset> entry : meshFactory.getSubsets().entrySet()) {
@@ -77,11 +121,15 @@ public class GLMeshRenderer {
 		}
 	}
 	
-	public void cleanup(GL3 gl3) throws GL3Error {
-		for (VertexBuffer<MeshRenderVertex> vbo : vboMap.values())
-			vbo.cleanup(gl3);
+	public void dispose(GL3 gl3) {
+		for (VertexBuffer<MeshRenderVertex> vbo : vboMap.values()) {
+			try {
+				vbo.dispose(gl3);
+			} catch (GL3Error e) {
+				logger.error(e.getMessage(), e);
+			}
+		}
 	}
-	
 	
 	public void setTexture(String subsetId, Texture texture) {
 		if (meshFactory.getSubsets().containsKey(subsetId)) {
@@ -166,5 +214,9 @@ public class GLMeshRenderer {
 		vbo.unmap(gl3);
 		
 		vbo.draw(gl3, GL3.GL_TRIANGLES);
+	}
+
+	public MeshFactory getMeshFactory() {
+		return meshFactory;
 	}
 }

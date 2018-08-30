@@ -14,27 +14,19 @@ import net.cbaakman.occupy.render.BoneTransformation;
 public class MeshBoneAnimationState {
 
 	private MeshBoneAnimation animation;
-
-	private float frame = 0.0f;
+	private int millisecondsPerFrame;
 	
-	private float speed;
-	
-	public MeshBoneAnimationState(MeshBoneAnimation animation, float speed) {
+	public MeshBoneAnimationState(MeshBoneAnimation animation, int millisecondsPerFrame) {
 		this.animation = animation;
-		this.speed = speed;
-	}
-	
-	public void reset() {
-		frame = 0.0f;
-	}
-	
-	public void update(float dt) {
-		frame += speed * dt;
-		if (frame > animation.getLength())
-			frame -= animation.getLength();
+		this.millisecondsPerFrame = millisecondsPerFrame;
 	}
 
-	public Map<String, BoneTransformation> getAnimationState() {
+	public Map<String, BoneTransformation> getArmatureState(long milliseconds) {
+		
+		long millisecondsPeriod = millisecondsPerFrame * animation.getLength(),
+			 millisecondsRemain = milliseconds % millisecondsPeriod;
+		
+		float frame = ((float)millisecondsRemain) / millisecondsPerFrame;
 		
 		Map<String, BoneTransformation> transformations = new HashMap<String, BoneTransformation>();
 		for (MeshBoneAnimation.Layer layer : animation.getLayers()) {

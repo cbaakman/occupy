@@ -15,7 +15,11 @@ import com.jogamp.opengl.GLEventListener;
 
 import net.cbaakman.occupy.Update;
 
-public abstract class Scene implements GLEventListener, MouseListener, MouseWheelListener, MouseMotionListener, KeyListener {
+public abstract class Scene implements GLEventListener,
+									   MouseListener,
+									   MouseWheelListener,
+									   MouseMotionListener,
+									   KeyListener {
 
 	@Override
 	public void keyTyped(KeyEvent e) {
@@ -74,7 +78,7 @@ public abstract class Scene implements GLEventListener, MouseListener, MouseWhee
 	@Override
 	public void mouseWheelMoved(MouseWheelEvent e) {
 	}
-
+	
 	@Override
 	public void init(GLAutoDrawable drawable) {
 	}

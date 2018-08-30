@@ -19,24 +19,12 @@ public class Infantry extends Unit {
 	
 	private final static float WALK_SPEED = 1.0f;
 	
-	private MeshBoneAnimationState animationState;
-	
 	public Infantry(Server server) {
 		super(server);
 	}
 	
 	public Infantry(Client client) {
 		super(client);
-		try {
-			MeshFactory mesh = client.getResourceManager().getMesh("infantry");
-			animationState = new MeshBoneAnimationState(mesh.getAnimation("walk"), 10.0f);
-		} catch (KeyError | InterruptedException | ExecutionException e) {
-			throw new SeriousError(e);
-		}
-	}
-	
-	public MeshBoneAnimationState getAnimationState() {
-		return animationState;
 	}
 	
 	@Override
@@ -46,8 +34,6 @@ public class Infantry extends Unit {
 			MoveOrder order = (MoveOrder)currentOrder;
 			moveTo(order.getDestination(), dt);
 		}
-		
-		animationState.update(dt);
 	}
 
 	private void moveTo(Vector3f destination, float dt) {

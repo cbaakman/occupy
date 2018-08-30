@@ -60,9 +60,9 @@ public class NetworkClient extends Client {
 	}
 
 	@Override
-	public Connection connectToServer() throws CommunicationError, SeriousError {
+	public Connection connectToServer() throws CommunicationError {
 		if (udpMessenger == null)
-			throw new SeriousError("client udp has not been initialized");
+			throw new SeriousError("client udp has not yet been initialized");
 		
 		Socket socket = new Socket();
 		try {

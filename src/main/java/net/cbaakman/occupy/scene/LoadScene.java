@@ -8,36 +8,43 @@ import org.apache.log4j.Logger;
 
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GLAutoDrawable;
-import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.math.FloatUtil;
+import com.jogamp.opengl.util.glsl.ShaderProgram;
 
 import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.annotations.VertexAttrib;
-import net.cbaakman.occupy.errors.ErrorQueue;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.ShaderCompileError;
 import net.cbaakman.occupy.errors.ShaderLinkError;
 import net.cbaakman.occupy.load.LoadStats;
 import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector2f;
-import net.cbaakman.occupy.render.Shader;
 import net.cbaakman.occupy.render.Vertex;
 import net.cbaakman.occupy.render.VertexBuffer;
+import net.cbaakman.occupy.resource.ShaderProgramResource;
 
 public class LoadScene extends Scene {
 	
 	private static Logger logger = Logger.getLogger(LoadScene.class);
 
-	private Loader loader;
-	private Client client;
+	private final Loader loader;
+	private final Client client;
 	
 	private static float LOAD_BAR_WIDTH = 200.0f;
 	private static float LOAD_BAR_HEIGHT = 20.0f;
 	private static float LOAD_BAR_EDGE = 3.0f;
 	
-	public LoadScene(Loader loader, Client client) {
-		this.loader = loader;
+	public LoadScene(Client client, ResourceUsingScene nextScene) {
+		this.loader = nextScene.getResourceManager().getLoader();
 		this.client = client;
+
+		loader.whenDone(new Runnable() {
+			@Override
+			public void run() {				
+				client.switchScene(nextScene);
+			}
+		});
+		loader.setErrorQueue(client.getErrorQueue());
 	}
 	
 	private static final String VERTEX_SHADER_SRC = "#version 150\n" +
@@ -47,7 +54,8 @@ public class LoadScene extends Scene {
 						      FRAGMENT_SHADER_SRC = "#version 150\n" +
 										      		"out vec4 fragColor;\n" + 
 										        	"void main() { fragColor = vec4(1.0, 1.0, 1.0, 1.0); }";
-	private int shaderProgram = 0;
+	
+	private ShaderProgram shaderProgram;
 	
 	private static final int VERTEX_INDEX = 0;
 	
@@ -90,6 +98,8 @@ public class LoadScene extends Scene {
 	@Override
 	public void init(GLAutoDrawable drawable) {
 		
+		loader.startConcurrent(drawable);
+		
 		GL3 gl3 = drawable.getGL().getGL3();
 
 		try {
@@ -108,11 +118,11 @@ public class LoadScene extends Scene {
 			vboFrame = VertexBuffer.create(gl3, LoadVertex.class, verticesFrame.size(), GL3.GL_STATIC_DRAW);
 			vboFrame.update(gl3, verticesFrame, 0);
 			
-			vboBar = VertexBuffer.create(gl3, LoadVertex.class, 4, GL3.GL_DYNAMIC_DRAW); 
-			
-			shaderProgram = Shader.createProgram(gl3, VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
+			vboBar = VertexBuffer.create(gl3, LoadVertex.class, 4, GL3.GL_DYNAMIC_DRAW);
+			  
+			shaderProgram = ShaderProgramResource.link(gl3, VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
 	        
-	        gl3.glBindAttribLocation(shaderProgram, VERTEX_INDEX, "position");
+	        gl3.glBindAttribLocation(shaderProgram.program(), VERTEX_INDEX, "position");
 	        GL3Error.check(gl3);        
 	        
 		} catch (ShaderCompileError | GL3Error | ShaderLinkError e) {
@@ -123,13 +133,16 @@ public class LoadScene extends Scene {
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
 		
+		if (!loader.isFinished())
+			loader.cancel();
+		
 		GL3 gl3 = drawable.getGL().getGL3();
 		
 		try {
-			Shader.deleteProgram(gl3, shaderProgram);
+			shaderProgram.destroy(gl3);
 			
-			vboFrame.cleanup(gl3);
-			vboBar.cleanup(gl3);
+			vboFrame.dispose(gl3);
+			vboBar.dispose(gl3);
 		} catch (GL3Error e) {
 			client.getErrorQueue().pushError(e);
 		}
@@ -148,10 +161,9 @@ public class LoadScene extends Scene {
 	    	float[] projectionMatrix = new float[16];
 			FloatUtil.makeOrtho(projectionMatrix, 0, true, -(float)(w) / 2, (float)(w) / 2, -(float)(h) / 2, (float)(h) / 2, -1.0f, 1.0f);
 			
-			gl3.glUseProgram(shaderProgram);
-			GL3Error.check(gl3);
+			shaderProgram.useProgram(gl3, true);
 			
-			int projectionMatrixLocation = gl3.glGetUniformLocation(shaderProgram, "projectionMatrix");
+			int projectionMatrixLocation = gl3.glGetUniformLocation(shaderProgram.program(), "projectionMatrix");
 			if (projectionMatrixLocation == -1)
 				GL3Error.throwMe(gl3);
 			
@@ -191,6 +203,8 @@ public class LoadScene extends Scene {
 		    
 		    vboBar.update(gl3,  barVertices, 0);
 		    vboBar.draw(gl3, GL3.GL_TRIANGLE_STRIP);
+
+			shaderProgram.useProgram(gl3, false);
         }
         catch (GL3Error e) {
 			client.getErrorQueue().pushError(e);

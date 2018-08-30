@@ -8,7 +8,6 @@ import com.jogamp.opengl.math.Quaternion;
 
 import lombok.Data;
 import net.cbaakman.occupy.Client;
-import net.cbaakman.occupy.Identifier;
 import net.cbaakman.occupy.Server;
 import net.cbaakman.occupy.Updatable;
 import net.cbaakman.occupy.annotations.ClientToServer;

@@ -1,70 +1,46 @@
 package net.cbaakman.occupy.resource;
 
-import java.awt.image.BufferedImage;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.jogamp.opengl.GL3;
+
 import net.cbaakman.occupy.Client;
-import net.cbaakman.occupy.errors.KeyError;
-import net.cbaakman.occupy.font.Font;
-import net.cbaakman.occupy.font.FontFactory;
-import net.cbaakman.occupy.font.FontStyle;
+import net.cbaakman.occupy.load.LoadRecord;
 import net.cbaakman.occupy.load.Loader;
-import net.cbaakman.occupy.mesh.MeshFactory;
 
 public class ResourceManager {
 	
-	static Logger logger = Logger.getLogger(ResourceManager.class);
-
-	private Client client;
+	private static Logger logger = Logger.getLogger(ResourceManager.class);
 	
-	private Map<String, Future<BufferedImage>> images = new HashMap<String, Future<BufferedImage>>();
-	private Map<String, Future<MeshFactory>> meshes = new HashMap<String, Future<MeshFactory>>();
+	private List<Resource<?>> resources = new ArrayList<Resource<?>>();
+
+	private final Loader loader;
 	
 	public ResourceManager(Client client) {
-		this.client = client;
+		loader = new Loader(client.getConfig().getLoadConcurrency());
 	}
-
-	public MeshFactory getMesh(String name)
-		throws KeyError, InterruptedException, ExecutionException {
-		synchronized(meshes) {
-			if (!meshes.containsKey(name))
-				throw new KeyError(name);
-			
-			return meshes.get(name).get();
-		}
+	
+	public Loader getLoader() {
+		return loader;
 	}
-
-	public BufferedImage getImage(String name)
-		throws KeyError, InterruptedException, ExecutionException {
+	
+	public void submitAll(Loader loader) {
+		for (Resource<?> resource : resources)
+			loader.submit(resource);
+	}
+	
+	public void disposeAll(GL3 gl3) {
+		for (Resource<?> resource : resources)
+			resource.dispose(gl3);
+		resources.clear();
+	}
+	
+	public <T> LoadRecord<T> submit(Resource<T> resource) {
+		resources.add(resource);
 		
-		synchronized(images) {
-			if (!images.containsKey(name))
-				throw new KeyError(name);
-			
-			return images.get(name).get();
-		}
-	}
-
-	public void addAllJobsTo(Loader loader) {
-		addImageJobTo(loader, "cursor_default");
-		addImageJobTo(loader, "infantry");
-		addMeshJobTo(loader, "infantry");
-	}
-
-	private void addMeshJobTo(Loader loader, String name) {
-		synchronized(meshes) {
-			meshes.put(name, loader.add(Resource.getMeshJob(name)));
-		}
-	}
-
-	private void addImageJobTo(Loader loader, String name) {
-		synchronized(images) {
-			images.put(name, loader.add(Resource.getImageJob(name)));
-		}
+		return loader.submit(resource);
 	}
 }

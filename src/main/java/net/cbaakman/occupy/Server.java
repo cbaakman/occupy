@@ -61,10 +61,10 @@ public abstract class Server {
 	}
 	
 	private SynchronizedPool<UUID, Updatable> updatables = new SynchronizedPool<UUID, Updatable>();
-	private SynchronizedPool<Identifier, ClientRecord> clientRecords = new SynchronizedPool<Identifier, ClientRecord>();
+	private SynchronizedPool<Object, ClientRecord> clientRecords = new SynchronizedPool<Object, ClientRecord>();
 	
 	protected ServerConfig config;
-	private Identifier serverId = new UUIDIdentifier(UUID.randomUUID());
+	private Object serverId = UUID.randomUUID();
 	
 	public Server(ServerConfig config) {
 		this.config = config;
@@ -126,7 +126,7 @@ public abstract class Server {
 
 	protected abstract void initCommunication() throws InitError;
 
-	protected void onClientConnect(Identifier clientId, Connection connection)
+	protected void onClientConnect(Object clientId, Connection connection)
 			throws CommunicationError {
 		
 		if (clientRecords.hasKey(clientId)) {
@@ -200,7 +200,7 @@ public abstract class Server {
 		oos.flush();
 	}
 
-	private void onClientLogin(Identifier clientId, Credentials credentials) throws AuthenticationError {
+	private void onClientLogin(Object clientId, Credentials credentials) throws AuthenticationError {
 		
 		Authenticator authenticator = new Authenticator(getPasswordFile());
 		
@@ -216,12 +216,12 @@ public abstract class Server {
 		}
 	}
 	
-	protected void logoutClient(Identifier clientId) {
+	protected void logoutClient(Object clientId) {
 
 		clientRecords.remove(clientId);
 	}
 	
-	protected void onPacket(Identifier clientId, Packet packet) throws SeriousError {
+	protected void onPacket(Object clientId, Packet packet) throws SeriousError {
 				
 		if (clientRecords.hasKey(clientId)) {
 			
@@ -247,7 +247,7 @@ public abstract class Server {
 		}
 	}
 
-	protected void processUpdate(Identifier clientId, Update update) throws SeriousError {
+	protected void processUpdate(Object clientId, Update update) throws SeriousError {
 		
 		Updatable updatable = updatables.get(update.getObjectID());
 			
@@ -274,13 +274,13 @@ public abstract class Server {
 		}
 	}
 	
-	protected abstract void sendPacket(Identifier clientId, Packet packet) throws CommunicationError;
+	protected abstract void sendPacket(Object clientId, Packet packet) throws CommunicationError;
 	
 	private void update(float dt) throws CommunicationError {
 				
 		// timeout clients
 		Date now = new Date();
-		for (Identifier id : clientRecords.getKeys()) {
+		for (Object id : clientRecords.getKeys()) {
 			ClientRecord clientRecord = clientRecords.get(id);
 			if ((now.getTime() - clientRecord.getLastContact().getTime()) > config.getContactTimeoutMS()) {
 				clientRecords.remove(id);
@@ -291,7 +291,7 @@ public abstract class Server {
 			updatable.updateOnServer(dt);
 		}
 		
-		for (Identifier clientId : clientRecords.getKeys()) {
+		for (Object clientId : clientRecords.getKeys()) {
 			ClientRecord clientRecord = clientRecords.get(clientId);
 			
 			// Ping to maintain contact:

@@ -4,15 +4,16 @@ import com.jogamp.opengl.GL3;
 
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.game.Entity;
+import net.cbaakman.occupy.load.Loader;
+import net.cbaakman.occupy.resource.ResourceManager;
 
 public abstract class EntityRenderer<T extends Entity> {
-	
-	public void cleanUp(GL3 gl3) throws GL3Error {
-	}
 
 	public void renderOpaque(GL3 gl3, float[] projectionMatrix, float[] modelViewMatrix, T entity) throws GL3Error {		
 	}
 	
 	public void renderTransparent(GL3 gl3, float[] projectionMatrix, float[] modelViewMatrix, T entity) throws GL3Error {
 	}
+	
+	public abstract void orderFrom(ResourceManager resourceManager);
 }

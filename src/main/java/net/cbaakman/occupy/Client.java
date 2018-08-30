@@ -3,7 +3,9 @@ package net.cbaakman.occupy;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Image;
+import java.awt.MouseInfo;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
@@ -19,6 +21,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 import javax.swing.JFrame;
+import javax.swing.WindowConstants;
 
 import org.apache.log4j.Logger;
 import org.apache.maven.model.Model;
@@ -48,7 +51,6 @@ import net.cbaakman.occupy.errors.RenderError;
 import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.game.PlayerRecord;
 import net.cbaakman.occupy.load.Loader;
-import net.cbaakman.occupy.resource.ResourceManager;
 import net.cbaakman.occupy.scene.InGameScene;
 import net.cbaakman.occupy.scene.LoadScene;
 import net.cbaakman.occupy.scene.Scene;
@@ -58,7 +60,6 @@ public abstract class Client {
 	
 	static Logger logger = Logger.getLogger(Client.class);
 	
-	private ResourceManager resourceManager = new ResourceManager(this);
 	private JFrame frame;
 	private GLCanvas glCanvas;
 	private ErrorQueue errorQueue = new ErrorQueue();
@@ -221,33 +222,11 @@ public abstract class Client {
 			logger.debug("making " + config.getDataDir());
 			config.getDataDir().toFile().mkdirs();
 		}
-		
-		Loader loader = new Loader(config.getLoadConcurrency());
-		
-		resourceManager.addAllJobsTo(loader);
 
 		GLProfile profile = GLProfile.get(GLProfile.GL3);
 		GLCapabilities capabilities = new GLCapabilities(profile);
 	
 		glCanvas = new GLCanvas(capabilities);
-		
-		loader.whenDone(new Runnable() {
-			@Override
-			public void run() {
-				// TODO: show login screen
-				while (!loggedIn()) {
-					try {
-						Thread.sleep(100);
-					} catch (InterruptedException e) {
-						errorQueue.pushError(e);
-						return;
-					}
-				}
-				
-				switchScene(new InGameScene(Client.this, loggedInPlayerRecord));
-			}
-		});
-		loader.setErrorQueue(getErrorQueue());
 
 		glCanvas.setSize(config.getScreenWidth(), config.getScreenHeight());
 		
@@ -255,13 +234,21 @@ public abstract class Client {
 	    Image i = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
 	    Cursor noCursor = t.createCustomCursor(i, new Point(0, 0), "none"); 
 		glCanvas.setCursor(noCursor);
+
+		// TODO: show login screen
+		while (!loggedIn()) {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				logger.error(e.getMessage(), e);
+			}
+		}
 		
-		switchScene(new LoadScene(loader, this));
-		
-		loader.start();
+		switchScene(new LoadScene(this, new InGameScene(Client.this, loggedInPlayerRecord)));
 
 		frame = new JFrame();
 		frame.getContentPane().add(glCanvas);
+		frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 		frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -287,7 +274,8 @@ public abstract class Client {
 		if (currentScene != null)
 			currentScene.update(dt);
 
-		glCanvas.display();
+		if (glCanvas.isVisible())
+			glCanvas.display();
 
 		errorQueue.throwAnyFirstEncounteredError();
 	}
@@ -325,8 +313,11 @@ public abstract class Client {
 			if (loggedIn())
 				logout();
 
-			shutdownClient();
-			shutdownCommunication();
+			try {
+				shutdownClient();
+			} finally {
+				shutdownCommunication();
+			}
 		}
 	}
 	
@@ -335,8 +326,11 @@ public abstract class Client {
 	protected abstract void initCommunication() throws InitError;
 	
 	protected void shutdownClient() {
-		glCanvas.destroy();
-		frame.dispose();
+		if (glCanvas != null)
+			glCanvas.destroy();
+		
+		if (frame != null)
+			frame.dispose();
 	}
 	
 	public void stop() {
@@ -360,12 +354,12 @@ public abstract class Client {
 		return loggedInPlayerRecord != null;
 	}
 
+	public PlayerRecord getLoggedInPlayer() {
+		return loggedInPlayerRecord;
+	}
+
 	public ClientConfig getConfig() {
 		return config;
-	}
-	
-	public ResourceManager getResourceManager() {
-		return resourceManager;
 	}
 	
 	public void switchScene(Scene scene) {
@@ -402,5 +396,27 @@ public abstract class Client {
 				currentScene = scene;
 			}
 		});
+	}
+	
+	public boolean isMouseInScreen() {
+		if (glCanvas == null || !glCanvas.isVisible())
+			return false;
+		
+		 Point mousePos = MouseInfo.getPointerInfo().getLocation();
+		 
+		 Rectangle bounds = glCanvas.getBounds();
+		 bounds.setLocation(glCanvas.getLocationOnScreen());
+		 
+		 return bounds.contains(mousePos);
+	}
+	
+	public Point getMouseLocationOnScreen() {
+		if (glCanvas == null || !glCanvas.isVisible())
+			return null;
+		
+		Point screenPos = glCanvas.getLocationOnScreen(),
+			  mousePos = MouseInfo.getPointerInfo().getLocation();
+		
+		return new Point(mousePos.x - screenPos.x, mousePos.y - screenPos.y);
 	}
 }

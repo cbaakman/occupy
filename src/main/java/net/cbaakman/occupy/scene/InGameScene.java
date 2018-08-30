@@ -1,13 +1,12 @@
 package net.cbaakman.occupy.scene;
 
-import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
-import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map.Entry;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
+
+import javax.validation.constraints.NotNull;
 
 import org.apache.log4j.Logger;
 
@@ -15,11 +14,6 @@ import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.math.FloatUtil;
 import com.jogamp.opengl.math.Quaternion;
-import com.jogamp.opengl.util.awt.ImageUtil;
-import com.jogamp.opengl.util.texture.Texture;
-import com.jogamp.opengl.util.texture.TextureData;
-import com.jogamp.opengl.util.texture.TextureIO;
-import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
 
 import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.SynchronizedPool;
@@ -34,44 +28,53 @@ import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.KeyError;
 import net.cbaakman.occupy.errors.SeriousError;
-import net.cbaakman.occupy.errors.ShaderCompileError;
-import net.cbaakman.occupy.errors.ShaderLinkError;
 import net.cbaakman.occupy.game.Camera;
 import net.cbaakman.occupy.game.Entity;
 import net.cbaakman.occupy.game.Infantry;
 import net.cbaakman.occupy.game.PlayerRecord;
-import net.cbaakman.occupy.math.Vector2f;
 import net.cbaakman.occupy.math.Vector3f;
-import net.cbaakman.occupy.render.GLSprite2DRenderer;
+import net.cbaakman.occupy.render.GL3Cursor;
+import net.cbaakman.occupy.render.GL3Sprite2DRenderer;
+import net.cbaakman.occupy.render.GameDefaultCursor;
 import net.cbaakman.occupy.render.entity.EntityRenderer;
 import net.cbaakman.occupy.render.entity.InfantryRenderer;
-import net.cbaakman.occupy.render.entity.RenderRegistry;
+import net.cbaakman.occupy.render.entity.EntityRenderRegistry;
+import net.cbaakman.occupy.resource.ResourceManager;
 
-public class InGameScene extends Scene {
+public class InGameScene extends ResourceUsingScene {
 	Logger logger = Logger.getLogger(InGameScene.class);
-
-	private PlayerRecord playerRecord = null;
+	
+	@NotNull
+	private PlayerRecord playerRecord;
 	
 	private Client client;
 
-	private RenderRegistry renderRegistry = new RenderRegistry();
+	private EntityRenderRegistry entityRenderRegistry = new EntityRenderRegistry();
 	
 	private Camera camera = new Camera();
 
 	private SynchronizedPool<UUID, Updatable> updatables = new SynchronizedPool<UUID, Updatable>();
 	
-	private Texture cursorTexture = null;
-	private GLSprite2DRenderer cursorRenderer = null;
-	private Vector2f cursorPosition = new Vector2f(Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY);
-	private volatile boolean mouseInCanvas = false;
+	private GL3Sprite2DRenderer render2d = new GL3Sprite2DRenderer();
+	private GL3Cursor cursor = new GameDefaultCursor(render2d);
 	
 	public InGameScene(Client client, PlayerRecord playerRecord) {
+		super(client);
+		
 		this.client = client;
-
 		this.playerRecord = playerRecord;
 
 		camera.setPosition(new Vector3f(0.0f, 100.0f, 100.0f));
 		camera.setOrientation(new Quaternion().rotateByAngleX((float)Math.toRadians(-45.0)));
+
+		entityRenderRegistry.registerForEntity(Infantry.class, new InfantryRenderer());
+		
+		ResourceManager resourceManager = getResourceManager();
+		
+		render2d.orderFrom(resourceManager);
+		cursor.orderFrom(resourceManager);
+		for (EntityRenderer<?> renderer : entityRenderRegistry)
+			renderer.orderFrom(resourceManager);
 	}
 
 	@Override
@@ -90,7 +93,6 @@ public class InGameScene extends Scene {
 	        
 	        gl3.glClear(GL3.GL_COLOR_BUFFER_BIT | GL3.GL_DEPTH_BUFFER_BIT);
 			GL3Error.check(gl3);
-
 
 			float[] projectionMatrix = new float[16];
 			FloatUtil.makePerspective(projectionMatrix, 0, true,
@@ -116,7 +118,8 @@ public class InGameScene extends Scene {
 				if (updatable instanceof Entity) {
 					Entity entity = (Entity)updatable;
 
-					EntityRenderer renderer = renderRegistry.getForEntity(entity.getClass());
+					EntityRenderer<Entity> renderer = (EntityRenderer<Entity>)
+							entityRenderRegistry.getForEntity(entity.getClass());
 
 					renderer.renderOpaque(gl3, projectionMatrix, modelViewMatrix, entity);
 				}
@@ -132,7 +135,8 @@ public class InGameScene extends Scene {
 				if (updatable instanceof Entity) {
 					Entity entity = (Entity)updatable;
 
-					EntityRenderer renderer = renderRegistry.getForEntity(entity.getClass());
+					EntityRenderer<Entity> renderer = (EntityRenderer<Entity>)
+							entityRenderRegistry.getForEntity(entity.getClass());
 
 					renderer.renderTransparent(gl3, projectionMatrix, modelViewMatrix, entity);
 				}
@@ -146,66 +150,15 @@ public class InGameScene extends Scene {
 			gl3.glBlendFunc(GL3.GL_SRC_ALPHA, GL3.GL_ONE_MINUS_SRC_ALPHA);
 			GL3Error.check(gl3);
 			
-			if (mouseInCanvas) {
-				cursorRenderer.set(gl3, cursorPosition, 16.0f,
-								   0.0f, 1.0f, 1.0f, 0.0f);
-				cursorRenderer.render(gl3, projectionMatrix);
+			if (client.isMouseInScreen()) {				
+				cursor.render(drawable, client.getMouseLocationOnScreen());
 			}
 			
 		} catch (GL3Error | KeyError | IndexOutOfBoundsException  e) {
 			client.getErrorQueue().pushError(e);
 		}
 	}
-
-	@Override
-	public void dispose(GLAutoDrawable drawable) {
-		GL3 gl3 = drawable.getGL().getGL3();
-		
-		try {
-			cursorRenderer.cleanUp(gl3);
-			
-			cursorTexture.destroy(gl3);
-			
-			renderRegistry.cleanUpAll(gl3);
-		} catch (GL3Error e) {
-			client.getErrorQueue().pushError(e);
-		}
-	}
-
-	@Override
-	public void init(GLAutoDrawable drawable) {
-		GL3 gl3 = drawable.getGL().getGL3();
-		
-		try {
-			renderRegistry.registerForEntity(Infantry.class, new InfantryRenderer(client, gl3));
-			
-			BufferedImage cursorImage;
-			try {
-				cursorImage = client.getResourceManager().getImage("cursor_default");
-			} catch (KeyError | InterruptedException | ExecutionException e) {
-				throw new SeriousError(e);
-			}
-			TextureData textureData = AWTTextureIO.newTextureData(gl3.getGLProfile(), cursorImage, true);
-			if (textureData.getMustFlipVertically()) {
-				ImageUtil.flipImageVertically(cursorImage);
-				textureData = AWTTextureIO.newTextureData(gl3.getGLProfile(), cursorImage, true);
-			}
-
-			cursorTexture = TextureIO.newTexture(gl3, textureData);
-			cursorTexture.setTexParameterf(gl3, GL3.GL_TEXTURE_MIN_FILTER, GL3.GL_NEAREST);
-			cursorTexture.setTexParameterf(gl3, GL3.GL_TEXTURE_MAG_FILTER, GL3.GL_NEAREST);
-			cursorTexture.setTexParameterf(gl3, GL3.GL_TEXTURE_WRAP_S, GL3.GL_REPEAT);
-			cursorTexture.setTexParameterf(gl3, GL3.GL_TEXTURE_WRAP_T, GL3.GL_REPEAT);
-
-			cursorRenderer = new GLSprite2DRenderer(gl3);
-			cursorRenderer.setTexture(cursorTexture);
-			
-		} catch (GL3Error | SeriousError | ShaderCompileError | ShaderLinkError e) {
-			logger.error(e.getMessage(), e);
-			
-			client.getErrorQueue().pushError(e);
-		}
-	}
+	
 	@Override
 	public synchronized void onUpdateFromServer(Update update) {
 		
@@ -246,8 +199,8 @@ public class InGameScene extends Scene {
 		}
 	}
 	private final static float CAMERA_MOVE_SPEED = 100.0f,
-			   CAMERA_ZOOM_PER_NOTCH = 5.0f,
-			   CAMERA_MIN_Y = 25.0f;
+							   CAMERA_ZOOM_PER_NOTCH = 5.0f,
+							   CAMERA_MIN_Y = 25.0f;
 
 	@Override
 	public synchronized void mouseWheelMoved(MouseWheelEvent event) {
@@ -262,30 +215,11 @@ public class InGameScene extends Scene {
 		
 		camera.getPosition().move(vOut);
 	}
-
-	
-	@Override
-	public void mouseMoved(MouseEvent event) {
-		cursorPosition = new Vector2f((float)event.getX(), (float)event.getY());
-	}
-
-	@Override
-	public void mouseDragged(MouseEvent event) {
-		cursorPosition = new Vector2f((float)event.getX(), (float)event.getY());
-	}
-
-	@Override
-	public void mouseEntered(MouseEvent evt) {
-		mouseInCanvas = true;
-    }
-
-	@Override
-    public void mouseExited(MouseEvent evt) {
-		mouseInCanvas = false;
-    }
 	
 	public synchronized void update(float dt) {
 		ClientConfig config = client.getConfig();
+
+		cursor.update(dt);
 		
 		if (isKeyDown(config.getKeyCameraForward()))
 			camera.getPosition().move(new Vector3f(0.0f, 0.0f, -CAMERA_MOVE_SPEED * dt));
