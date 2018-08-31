@@ -1,7 +1,6 @@
 package net.cbaakman.occupy.render;
 
 import java.nio.FloatBuffer;
-import java.util.Set;
 
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
@@ -9,22 +8,12 @@ import com.jogamp.opengl.util.texture.Texture;
 
 import net.cbaakman.occupy.annotations.VertexAttrib;
 import net.cbaakman.occupy.errors.GL3Error;
-import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.NotReadyError;
 import net.cbaakman.occupy.errors.SeriousError;
-import net.cbaakman.occupy.load.LoadRecord;
-import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector2f;
-import net.cbaakman.occupy.resource.Resource;
-import net.cbaakman.occupy.resource.ResourceLinker;
-import net.cbaakman.occupy.resource.ResourceLocator;
-import net.cbaakman.occupy.resource.ResourceManager;
-import net.cbaakman.occupy.resource.VertexBufferResource;
-import net.cbaakman.occupy.resource.WaitResource;
 
 public class GL3Sprite2DRenderer {
 	
-	private static class SpriteVertex extends Vertex {
+	public static class SpriteVertex extends Vertex {
 		@VertexAttrib(index=0)
 		Vector2f position;
 
@@ -42,22 +31,9 @@ public class GL3Sprite2DRenderer {
 	private ShaderProgram shaderProgram;
 	private Texture texture = null;
 	
-	public void orderFrom(ResourceManager resourceManager) {
-		
-		LoadRecord<ShaderProgram> asyncShaderProgram = ResourceLinker.addShaderJobs(resourceManager,
-							ResourceLocator.getVertexShaderPath("sprite2d"),
-							ResourceLocator.getFragmentShaderPath("sprite2d"));
-		
-		LoadRecord<VertexBuffer<SpriteVertex>> asyncVBO = resourceManager.submit(
-				new VertexBufferResource<SpriteVertex>(SpriteVertex.class, 4, GL3.GL_DYNAMIC_DRAW));
-		
-		resourceManager.submit(new WaitResource(asyncShaderProgram, asyncVBO){
-			@Override
-			protected void run(GL3 gl3) throws NotReadyError, InitError {
-				vbo = asyncVBO.get();
-				shaderProgram = asyncShaderProgram.get();
-			}
-		});
+	public GL3Sprite2DRenderer(ShaderProgram shaderProgram, VertexBuffer<SpriteVertex> vbo) {
+		this.shaderProgram = shaderProgram;
+		this.vbo = vbo;
 	}
 	
 	/**
@@ -108,7 +84,7 @@ public class GL3Sprite2DRenderer {
         gl3.glActiveTexture(GL3.GL_TEXTURE0);
 		GL3Error.check(gl3);
         
-        int textureLocation = gl3.glGetUniformLocation(shaderProgram.program(), "texture");
+        int textureLocation = gl3.glGetUniformLocation(shaderProgram.program(), "tex");
         if (textureLocation == -1)
         	GL3Error.throwMe(gl3);
         

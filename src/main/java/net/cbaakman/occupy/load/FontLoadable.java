@@ -1,4 +1,4 @@
-package net.cbaakman.occupy.resource;
+package net.cbaakman.occupy.load;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -8,18 +8,17 @@ import org.apache.batik.transcoder.TranscoderException;
 import com.jogamp.opengl.GL3;
 
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.NotReadyError;
+import net.cbaakman.occupy.errors.NotLoadedError;
 import net.cbaakman.occupy.font.Font;
 import net.cbaakman.occupy.font.FontFactory;
 import net.cbaakman.occupy.font.FontStyle;
-import net.cbaakman.occupy.load.LoadRecord;
 
-public class FontResource implements Resource<Font> {
+public class FontLoadable implements Loadable<Font> {
 
 	private LoadRecord<FontFactory> asyncFontFactory;
 	private FontStyle style;
 	
-	public FontResource(LoadRecord<FontFactory> asyncFontFactory, FontStyle style) {
+	public FontLoadable(LoadRecord<FontFactory> asyncFontFactory, FontStyle style) {
 		this.asyncFontFactory = asyncFontFactory;
 		this.style = style;
 	}
@@ -37,15 +36,11 @@ public class FontResource implements Resource<Font> {
 	}
 
 	@Override
-	public Font init(GL3 gl3) throws InitError, NotReadyError {
+	public Font load() throws InitError, NotLoadedError {
 		try {
 			return asyncFontFactory.get().generateFont(style);
 		} catch (TranscoderException e) {
 			throw new InitError(e);
 		}
-	}
-
-	@Override
-	public void dispose(GL3 gl3) {
 	}
 }

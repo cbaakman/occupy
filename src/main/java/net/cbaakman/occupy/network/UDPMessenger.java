@@ -9,10 +9,10 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
-import net.cbaakman.occupy.WhileThread;
 import net.cbaakman.occupy.communicate.Packet;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorQueue;
+import net.cbaakman.occupy.util.WhileThread;
 
 public abstract class UDPMessenger {
 

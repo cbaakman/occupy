@@ -12,7 +12,7 @@ import com.jogamp.opengl.GLContext;
 
 import net.cbaakman.occupy.errors.ErrorQueue;
 import net.cbaakman.occupy.errors.SeriousError;
-import net.cbaakman.occupy.resource.Resource;
+import net.cbaakman.occupy.resource.GL3Resource;
 
 public class Loader {
 	
@@ -78,39 +78,19 @@ public class Loader {
 		this.nConcurrent = nConcurrent;
 	}
 	
-	public void startConcurrent(GLAutoDrawable drawable) {
+	public void startConcurrent() {
 		synchronized(workers) {
 			synchronized(concurrentStarted) {
 				int i;
 				for (i = 0; i < nConcurrent; i++) {
-					GLContext sharedContext;
-					try {
-						sharedContext = drawable.createContext(drawable.getContext());
-					} catch (Exception e) {
-						Loader.this.cancel();
-						if (errorQueue != null)
-							errorQueue.pushError(e);
-						throw e;
-					}
 					
 					final Worker worker = new Worker();
 					
 					Thread thread = new Thread(String.format("loader-%d", i)) {
 						@Override
 						public void run() {
-							try {
-								if (sharedContext.makeCurrent() == GLContext.CONTEXT_NOT_CURRENT)
-									throw new SeriousError("cannot make context current");
-							} catch (Exception e) {
-								Loader.this.cancel();
-								if (errorQueue != null)
-									errorQueue.pushError(e);
-								throw e;
-							}
 							
-							worker.loop(Loader.this, sharedContext.getGL().getGL3());
-							
-							sharedContext.destroy();
+							worker.loop(Loader.this);
 							
 							onJobless(worker);
 						}
@@ -187,9 +167,9 @@ public class Loader {
 		this.errorQueue = errorQueue;
 	}
 	
-	public <T> LoadRecord<T> submit(Resource<T> resource) {
+	public <T> LoadRecord<T> submit(Loadable<T> loadable) {
 		
-		final LoadRecord<T> record = new LoadRecord<T>(this, resource);
+		final LoadRecord<T> record = new LoadRecord<T>(this, loadable);
 		
 		synchronized(jobRecords) {
 			jobRecords.add(record);

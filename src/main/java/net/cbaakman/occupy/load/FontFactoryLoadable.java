@@ -1,11 +1,11 @@
-package net.cbaakman.occupy.resource;
+package net.cbaakman.occupy.load;
 
 import java.io.InputStream;
 import net.cbaakman.occupy.font.FontFactory;
 
-public class FontFactoryResource extends FileDependentResource<FontFactory> {
+public class FontFactoryLoadable extends FileDependentLoadable<FontFactory> {
 
-	public FontFactoryResource(String path) {
+	public FontFactoryLoadable(String path) {
 		super(path);
 	}
 

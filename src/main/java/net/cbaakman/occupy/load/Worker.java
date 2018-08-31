@@ -6,7 +6,7 @@ import org.apache.log4j.Logger;
 
 import com.jogamp.opengl.GL3;
 
-import net.cbaakman.occupy.resource.Resource;
+import net.cbaakman.occupy.resource.GL3Resource;
 
 public class Worker {
 	
@@ -20,7 +20,7 @@ public class Worker {
 		}
 	}
 
-	public final void loop(Loader loader, GL3 gl3) {
+	public final void loop(Loader loader) {
 		while (loader.countWaiting() > 0) {
 			
 			LoadRecord<?> jobRecord;
@@ -32,7 +32,7 @@ public class Worker {
 			if (jobRecord != null) {
 				
 				try {
-					jobRecord.run(gl3);
+					jobRecord.run();
 				} finally {
 					synchronized (running) {
 						loader.reportResult(jobRecord);

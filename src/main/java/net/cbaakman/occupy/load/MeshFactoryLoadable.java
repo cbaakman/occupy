@@ -1,12 +1,12 @@
-package net.cbaakman.occupy.resource;
+package net.cbaakman.occupy.load;
 
 import java.io.InputStream;
 
 import net.cbaakman.occupy.mesh.MeshFactory;
 
-public class MeshFactoryResource extends FileDependentResource<MeshFactory> {
+public class MeshFactoryLoadable extends FileDependentLoadable<MeshFactory> {
 
-	public MeshFactoryResource(String path) {
+	public MeshFactoryLoadable(String path) {
 		super(path);
 	}
 

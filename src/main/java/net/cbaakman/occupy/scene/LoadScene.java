@@ -8,12 +8,14 @@ import org.apache.log4j.Logger;
 
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.GLContext;
 import com.jogamp.opengl.math.FloatUtil;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
 
 import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.annotations.VertexAttrib;
 import net.cbaakman.occupy.errors.GL3Error;
+import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.errors.ShaderCompileError;
 import net.cbaakman.occupy.errors.ShaderLinkError;
 import net.cbaakman.occupy.load.LoadStats;
@@ -21,6 +23,7 @@ import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector2f;
 import net.cbaakman.occupy.render.Vertex;
 import net.cbaakman.occupy.render.VertexBuffer;
+import net.cbaakman.occupy.resource.GL3ResourceInitializer;
 import net.cbaakman.occupy.resource.ShaderProgramResource;
 
 public class LoadScene extends Scene {
@@ -29,22 +32,16 @@ public class LoadScene extends Scene {
 
 	private final Loader loader;
 	private final Client client;
+	private ResourceUsingScene nextScene;
 	
 	private static float LOAD_BAR_WIDTH = 200.0f;
 	private static float LOAD_BAR_HEIGHT = 20.0f;
 	private static float LOAD_BAR_EDGE = 3.0f;
 	
 	public LoadScene(Client client, ResourceUsingScene nextScene) {
-		this.loader = nextScene.getResourceManager().getLoader();
+		this.loader = new Loader(client.getConfig().getLoadConcurrency());
 		this.client = client;
-
-		loader.whenDone(new Runnable() {
-			@Override
-			public void run() {				
-				client.switchScene(nextScene);
-			}
-		});
-		loader.setErrorQueue(client.getErrorQueue());
+		this.nextScene = nextScene;
 	}
 	
 	private static final String VERTEX_SHADER_SRC = "#version 150\n" +
@@ -98,7 +95,17 @@ public class LoadScene extends Scene {
 	@Override
 	public void init(GLAutoDrawable drawable) {
 		
-		loader.startConcurrent(drawable);
+		nextScene.orderFrom(loader);
+
+		loader.whenDone(new Runnable() {
+			@Override
+			public void run() {				
+				client.switchScene(nextScene);
+			}
+		});
+		loader.setErrorQueue(client.getErrorQueue());
+		
+		loader.startConcurrent();
 		
 		GL3 gl3 = drawable.getGL().getGL3();
 
@@ -125,7 +132,7 @@ public class LoadScene extends Scene {
 	        gl3.glBindAttribLocation(shaderProgram.program(), VERTEX_INDEX, "position");
 	        GL3Error.check(gl3);        
 	        
-		} catch (ShaderCompileError | GL3Error | ShaderLinkError e) {
+		} catch (Exception e) {
 			client.getErrorQueue().pushError(e);
 		}
 	}
@@ -143,7 +150,7 @@ public class LoadScene extends Scene {
 			
 			vboFrame.dispose(gl3);
 			vboBar.dispose(gl3);
-		} catch (GL3Error e) {
+		} catch (Exception e) {
 			client.getErrorQueue().pushError(e);
 		}
 	}
@@ -206,7 +213,7 @@ public class LoadScene extends Scene {
 
 			shaderProgram.useProgram(gl3, false);
         }
-        catch (GL3Error e) {
+        catch (Exception e) {
 			client.getErrorQueue().pushError(e);
         }
 	}

@@ -13,20 +13,21 @@ import com.jogamp.opengl.util.texture.Texture;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.KeyError;
-import net.cbaakman.occupy.errors.NotReadyError;
+import net.cbaakman.occupy.errors.NotLoadedError;
 import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.game.Infantry;
 import net.cbaakman.occupy.load.LoadRecord;
 import net.cbaakman.occupy.load.Loader;
+import net.cbaakman.occupy.load.MeshFactoryLoadable;
 import net.cbaakman.occupy.math.Vector3f;
 import net.cbaakman.occupy.mesh.MeshBoneAnimationState;
 import net.cbaakman.occupy.mesh.MeshFactory;
 import net.cbaakman.occupy.render.GL3MeshRenderer;
-import net.cbaakman.occupy.resource.MeshFactoryResource;
 import net.cbaakman.occupy.resource.ResourceLinker;
 import net.cbaakman.occupy.resource.ResourceLocator;
-import net.cbaakman.occupy.resource.ResourceManager;
-import net.cbaakman.occupy.resource.WaitResource;
+import net.cbaakman.occupy.resource.GL3Resource;
+import net.cbaakman.occupy.resource.GL3ResourceInitializer;
+import net.cbaakman.occupy.resource.GL3ResourceManager;
 
 public class InfantryRenderer extends EntityRenderer<Infantry> {
 	
@@ -38,34 +39,34 @@ public class InfantryRenderer extends EntityRenderer<Infantry> {
 	private Texture texture;
 	
 	@Override
-	public void orderFrom(ResourceManager resourceManager) {
+	public GL3ResourceInitializer pipeResources(Loader loader) throws InitError, NotLoadedError {
 		
-		LoadRecord<Texture> asyncTexture = ResourceLinker.submitTextureJobs(resourceManager, ResourceLocator.getImagePath("infantry"));
+		final GL3Resource<ShaderProgram> shaderProgramResource = ResourceLinker.forShaderProgram(loader,
+			ResourceLocator.getVertexShaderPath("infantry"),
+			ResourceLocator.getFragmentShaderPath("infantry")
+		);
 		
-		LoadRecord<GL3MeshRenderer> asyncMesh = GL3MeshRenderer.submit(resourceManager, "infantry");
-
-		LoadRecord<ShaderProgram> asyncProgram = ResourceLinker.addShaderJobs(resourceManager, ResourceLocator.getVertexShaderPath("infantry"),
-															   ResourceLocator.getFragmentShaderPath("infantry"));
+		final GL3Resource<Texture> textureResource = ResourceLinker.forTexture(loader,
+				ResourceLocator.getImagePath("infantry"));
 		
-		resourceManager.submit(new WaitResource(asyncTexture, asyncMesh, asyncProgram) {
-			
+		final GL3Resource<GL3MeshRenderer> meshResource = ResourceLinker.forMesh(loader,
+				ResourceLocator.getMeshPath("infantry"));
+		
+		return new GL3ResourceInitializer() {
 			@Override
-			protected void run(GL3 gl3) throws NotReadyError, InitError {
-				
-				glMeshRenderer = asyncMesh.get();
-				
-				texture = asyncTexture.get();
-				glMeshRenderer.setTexture("infantry", texture);
-
+			public void run(GL3 gl3, GL3ResourceManager resourceManager) throws InitError, NotLoadedError {
+				shaderProgram = resourceManager.submit(gl3, shaderProgramResource);
+				glMeshRenderer = resourceManager.submit(gl3, meshResource);
+				texture = resourceManager.submit(gl3, textureResource);
+								
 				try {
+					glMeshRenderer.setTexture("infantry", texture);
 					animationState = new MeshBoneAnimationState(glMeshRenderer.getMeshFactory().getAnimation("walk"), 100);
 				} catch (KeyError e) {
 					throw new SeriousError(e);
 				}
-				
-				shaderProgram = asyncProgram.get();
 			}
-		});
+		};
 	}
 
 	public void renderOpaque(GL3 gl3, float[] projectionMatrix,

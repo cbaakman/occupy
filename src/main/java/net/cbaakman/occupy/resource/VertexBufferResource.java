@@ -9,11 +9,12 @@ import com.jogamp.opengl.GL3;
 
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.InitError;
+import net.cbaakman.occupy.errors.NotLoadedError;
 import net.cbaakman.occupy.load.LoadRecord;
 import net.cbaakman.occupy.render.Vertex;
 import net.cbaakman.occupy.render.VertexBuffer;
 
-public class VertexBufferResource<T extends Vertex> implements Resource<VertexBuffer<T>> {
+public class VertexBufferResource<T extends Vertex> implements GL3Resource<VertexBuffer<T>> {
 	
 	static Logger logger = Logger.getLogger(VertexBufferResource.class);
 
@@ -36,7 +37,7 @@ public class VertexBufferResource<T extends Vertex> implements Resource<VertexBu
 	private VertexBuffer<T> vbo;
 	
 	@Override
-	public VertexBuffer<T> init(GL3 gl3) throws InitError {
+	public VertexBuffer<T> init(GL3 gl3, GL3ResourceManager resourceManager) throws InitError {
 		try {
 			vbo = VertexBuffer.create(gl3, vertexClass, vertexCount, glUsage);
 			return vbo;
@@ -48,7 +49,8 @@ public class VertexBufferResource<T extends Vertex> implements Resource<VertexBu
 	@Override
 	public void dispose(GL3 gl3) {
 		try {
-			vbo.dispose(gl3);
+			if (vbo != null)
+				vbo.dispose(gl3);
 		} catch (GL3Error e) {
 			logger.error(e.getMessage(), e);
 		}
@@ -57,10 +59,5 @@ public class VertexBufferResource<T extends Vertex> implements Resource<VertexBu
 	@Override
 	public String toString() {
 		return String.format("vbo_%d", jobId);
-	}
-
-	@Override
-	public Set<LoadRecord<?>> getDependencies() {
-		return new HashSet<LoadRecord<?>>();
 	}
 }

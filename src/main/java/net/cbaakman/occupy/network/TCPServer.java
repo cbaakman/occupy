@@ -5,9 +5,9 @@ import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
-import net.cbaakman.occupy.WhileThread;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.ErrorQueue;
+import net.cbaakman.occupy.util.WhileThread;
 
 public abstract class TCPServer {
 

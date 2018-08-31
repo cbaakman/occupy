@@ -3,6 +3,8 @@ package net.cbaakman.occupy.render;
 import java.awt.Point;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.log4j.Logger;
+
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.math.FloatUtil;
@@ -11,37 +13,39 @@ import com.jogamp.opengl.util.texture.Texture;
 import net.cbaakman.occupy.Client;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.NotReadyError;
+import net.cbaakman.occupy.errors.NotLoadedError;
 import net.cbaakman.occupy.load.LoadRecord;
 import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector2f;
 import net.cbaakman.occupy.resource.ResourceLinker;
 import net.cbaakman.occupy.resource.ResourceLocator;
-import net.cbaakman.occupy.resource.ResourceManager;
-import net.cbaakman.occupy.resource.WaitResource;
+import net.cbaakman.occupy.resource.GL3ResourceUser;
+import net.cbaakman.occupy.resource.GL3Resource;
+import net.cbaakman.occupy.resource.GL3ResourceInitializer;
+import net.cbaakman.occupy.resource.GL3ResourceManager;
 
-public class GameDefaultCursor extends GL3Cursor {
+public class GameDefaultCursor extends GL3Cursor implements GL3ResourceUser {
 	
-	Texture texture;
+	static Logger logger = Logger.getLogger(GameDefaultCursor.class);
 	
+	private Texture texture;
 	private GL3Sprite2DRenderer spriteRenderer;
-	
-	public GameDefaultCursor(GL3Sprite2DRenderer spriteRenderer) {
-		this.spriteRenderer = spriteRenderer;
-	}
 
 	@Override
-	public void orderFrom(ResourceManager resourceManager) {
-		LoadRecord<Texture> asyncTexture = ResourceLinker.submitTextureJobs(
-				resourceManager, ResourceLocator.getImagePath("cursor_default"));
+	public GL3ResourceInitializer pipeResources(Loader loader) throws InitError, NotLoadedError {
 		
-		resourceManager.submit(new WaitResource(asyncTexture) {
+		final GL3Resource<GL3Sprite2DRenderer> resourceSprite2D = ResourceLinker.forSprite2D(loader);
 
+		final GL3Resource<Texture> textureResource = ResourceLinker.forTexture(loader, ResourceLocator.getImagePath("cursor_default"));
+		
+		return new GL3ResourceInitializer() {
 			@Override
-			protected void run(GL3 gl3) throws NotReadyError, InitError {
-				texture = asyncTexture.get();
+			public void run(GL3 gl3, GL3ResourceManager resourceManager)
+					throws InitError, NotLoadedError {
+				spriteRenderer = resourceManager.submit(gl3, resourceSprite2D);
+				texture = resourceManager.submit(gl3, textureResource);
 			}
-		});
+		};
 	}
 
 	private float[] projectionMatrix = new float[16];

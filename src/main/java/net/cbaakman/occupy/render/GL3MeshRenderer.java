@@ -21,22 +21,24 @@ import lombok.Data;
 import net.cbaakman.occupy.annotations.VertexAttrib;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.NotReadyError;
+import net.cbaakman.occupy.errors.KeyError;
+import net.cbaakman.occupy.errors.NotLoadedError;
 import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.load.LoadRecord;
 import net.cbaakman.occupy.load.Loader;
+import net.cbaakman.occupy.load.MeshFactoryLoadable;
 import net.cbaakman.occupy.math.Vector2f;
 import net.cbaakman.occupy.math.Vector3f;
 import net.cbaakman.occupy.mesh.MeshFace;
 import net.cbaakman.occupy.mesh.MeshFactory;
 import net.cbaakman.occupy.mesh.MeshFactory.Subset;
 import net.cbaakman.occupy.mesh.MeshVertex;
-import net.cbaakman.occupy.resource.MeshFactoryResource;
-import net.cbaakman.occupy.resource.Resource;
+import net.cbaakman.occupy.resource.GL3Resource;
 import net.cbaakman.occupy.resource.ResourceLocator;
-import net.cbaakman.occupy.resource.ResourceManager;
+import net.cbaakman.occupy.util.StringHashable;
+import net.cbaakman.occupy.resource.GL3ResourceManager;
 
-public class GL3MeshRenderer {
+public class GL3MeshRenderer extends StringHashable {
 	
 	Logger logger  = Logger.getLogger(GL3MeshRenderer.class);
 	
@@ -67,38 +69,7 @@ public class GL3MeshRenderer {
 	private final MeshFactory meshFactory;
 	private final Map<String, Texture> textureMap = new HashMap<String, Texture>();
 	private final Map<String, VertexBuffer<MeshRenderVertex>> vboMap = new HashMap<String, VertexBuffer<MeshRenderVertex>>();
-	
-	public static LoadRecord<GL3MeshRenderer> submit(ResourceManager resourceManager, String meshName) {
-		LoadRecord<MeshFactory> asyncMesh = resourceManager.submit(new MeshFactoryResource(ResourceLocator.getMeshPath(meshName)));
 		
-		return resourceManager.submit(new Resource<GL3MeshRenderer>() {
-
-			@Override
-			public Set<LoadRecord<?>> getDependencies() {
-				Set<LoadRecord<?>> set = new HashSet<LoadRecord<?>>();
-				set.add(asyncMesh);
-				return set;
-			}
-
-			private GL3MeshRenderer renderer;
-			
-			@Override
-			public GL3MeshRenderer init(GL3 gl3) throws InitError, NotReadyError {
-				try {
-					renderer = new GL3MeshRenderer(gl3, asyncMesh.get());
-					return renderer;
-				} catch (GL3Error e) {
-					throw new InitError(e);
-				}
-			}
-
-			@Override
-			public void dispose(GL3 gl3) {
-				renderer.dispose(gl3);
-			}
-		});
-	}
-	
 	public GL3MeshRenderer(GL3 gl3, MeshFactory meshFactory) throws GL3Error {
 		this.meshFactory = meshFactory;
 		
@@ -131,10 +102,11 @@ public class GL3MeshRenderer {
 		}
 	}
 	
-	public void setTexture(String subsetId, Texture texture) {
+	public void setTexture(String subsetId, Texture texture) throws KeyError {
 		if (meshFactory.getSubsets().containsKey(subsetId)) {
 			textureMap.put(subsetId, texture);
 		}
+		else throw new KeyError(subsetId);
 	}
 	
 	public void render(GL3 gl3) throws GL3Error {
@@ -218,5 +190,10 @@ public class GL3MeshRenderer {
 
 	public MeshFactory getMeshFactory() {
 		return meshFactory;
+	}
+	
+	@Override
+	public String toString() {
+		return String.format("render:%s", meshFactory.toString());
 	}
 }

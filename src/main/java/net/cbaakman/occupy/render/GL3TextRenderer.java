@@ -25,7 +25,7 @@ import net.cbaakman.occupy.annotations.VertexAttrib;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.InitError;
 import net.cbaakman.occupy.errors.MissingGlyphError;
-import net.cbaakman.occupy.errors.NotReadyError;
+import net.cbaakman.occupy.errors.NotLoadedError;
 import net.cbaakman.occupy.font.Font;
 import net.cbaakman.occupy.font.FontStyle;
 import net.cbaakman.occupy.font.Glyph;
@@ -37,10 +37,10 @@ import net.cbaakman.occupy.load.LoadRecord;
 import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector2f;
 import net.cbaakman.occupy.render.GL3TextRenderer.GlyphVertex;
-import net.cbaakman.occupy.resource.Resource;
+import net.cbaakman.occupy.resource.GL3Resource;
 import net.cbaakman.occupy.resource.ResourceLinker;
 import net.cbaakman.occupy.resource.ResourceLocator;
-import net.cbaakman.occupy.resource.ResourceManager;
+import net.cbaakman.occupy.resource.GL3ResourceManager;
 import net.cbaakman.occupy.resource.VertexBufferResource;
 
 public class GL3TextRenderer {
@@ -72,52 +72,6 @@ public class GL3TextRenderer {
 			position = new Vector2f(x, y);
 			texCoord = new Vector2f(tx, ty);
 		}
-	}
-	
-	public static LoadRecord<GL3TextRenderer> submit(ResourceManager resourceManager, String fontName, FontStyle style) {
-
-		final LoadRecord<ShaderProgram> asyncShader = ResourceLinker.addShaderJobs(resourceManager,
-				ResourceLocator.getVertexShaderPath("sprite2d"),
-				ResourceLocator.getFragmentShaderPath("sprite2d"));
-		final LoadRecord<VertexBuffer<GL3TextRenderer.GlyphVertex>> asyncVBO = resourceManager.submit(
-				new VertexBufferResource<GlyphVertex>(GlyphVertex.class, 4, GL3.GL_DYNAMIC_DRAW));
-		
-		final LoadRecord<Font> asyncFont = ResourceLinker.submitFontJobs(resourceManager,
-													ResourceLocator.getFontPath(fontName), style);
-		
-
-		return resourceManager.submit(new Resource<GL3TextRenderer>() {
-			
-			private GL3TextRenderer renderer;
-			
-			@Override
-			public GL3TextRenderer init(GL3 gl3) throws NotReadyError, InitError {
-				ShaderProgram shaderProgram = asyncShader.get();
-				Font font = asyncFont.get();
-				VertexBuffer<GL3TextRenderer.GlyphVertex> vbo = asyncVBO.get();
-				
-				renderer = new GL3TextRenderer(gl3, font, shaderProgram, vbo);
-				return renderer;
-			}
-
-			@Override
-			public Set<LoadRecord<?>> getDependencies() {
-				Set<LoadRecord<?>> set = new HashSet<LoadRecord<?>>();
-				set.add(asyncShader);
-				set.add(asyncFont);
-				set.add(asyncVBO);
-				return set;
-			}
-
-			@Override
-			public void dispose(GL3 gl3) {
-				try {
-					renderer.dispose(gl3);
-				} catch (GL3Error e) {
-					logger.error(e.getMessage(), e);
-				}
-			}
-		});
 	}
 	
 	public GL3TextRenderer(GL3 gl3, Font font, ShaderProgram shaderProgram, VertexBuffer<GlyphVertex> vbo) {
@@ -224,7 +178,7 @@ public class GL3TextRenderer {
         glyphEntry.getGlTexture().bind(gl3);
 		GL3Error.check(gl3);
         
-        int textureLocation = gl3.glGetUniformLocation(shaderProgram.program(), "texture");
+        int textureLocation = gl3.glGetUniformLocation(shaderProgram.program(), "tex");
         if (textureLocation == -1)
         	GL3Error.throwMe(gl3);
         

@@ -15,10 +15,10 @@ import com.jogamp.opengl.util.texture.TextureIO;
 import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
 
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.NotReadyError;
+import net.cbaakman.occupy.errors.NotLoadedError;
 import net.cbaakman.occupy.load.LoadRecord;
 
-public class TextureResource implements Resource<Texture> {
+public class TextureResource implements GL3Resource<Texture> {
 	
 	@NotNull
 	private LoadRecord<BufferedImage> asyncImage;
@@ -32,18 +32,11 @@ public class TextureResource implements Resource<Texture> {
 		jobId = jobCount;
 		jobCount++;
 	}
-
-	@Override
-	public Set<LoadRecord<?>> getDependencies() {
-		Set<LoadRecord<?>> set = new HashSet<LoadRecord<?>>();
-		set.add(asyncImage);
-		return set;
-	}
 	
 	private Texture texture;
 	
 	@Override
-	public Texture init(GL3 gl3) throws NotReadyError, InitError {
+	public Texture init(GL3 gl3, GL3ResourceManager resourceManager) throws NotLoadedError, InitError {
 		
 		BufferedImage image = asyncImage.get();
 		
@@ -70,6 +63,7 @@ public class TextureResource implements Resource<Texture> {
 
 	@Override
 	public void dispose(GL3 gl3) {
-		texture.destroy(gl3);
+		if (texture != null)
+			texture.destroy(gl3);
 	}
 }

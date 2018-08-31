@@ -9,11 +9,12 @@ import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.NotReadyError;
+import net.cbaakman.occupy.errors.NotLoadedError;
 import net.cbaakman.occupy.errors.ShaderCompileError;
 import net.cbaakman.occupy.load.LoadRecord;
+import net.cbaakman.occupy.util.StringHashable;
 
-public class ShaderCodeResource implements Resource<ShaderCode> {
+public class ShaderCodeResource extends StringHashable implements GL3Resource<ShaderCode> {
 
 	private int shaderType;
 	private LoadRecord<String> asyncSource;
@@ -23,17 +24,10 @@ public class ShaderCodeResource implements Resource<ShaderCode> {
 		this.asyncSource = asyncSource;
 	}
 	
-	@Override
-	public Set<LoadRecord<?>> getDependencies() {
-		Set<LoadRecord<?>> set = new HashSet<LoadRecord<?>>();
-		set.add(asyncSource);
-		return set;
-	}
-	
 	private ShaderCode shaderCode;
 	
 	@Override
-	public ShaderCode init(GL3 gl3) throws InitError, NotReadyError {
+	public ShaderCode init(GL3 gl3, GL3ResourceManager resourceManager) throws InitError, NotLoadedError {
 		
 		try {
 			shaderCode = compile(gl3, shaderType, asyncSource.get());
@@ -60,7 +54,8 @@ public class ShaderCodeResource implements Resource<ShaderCode> {
 
 	@Override
 	public void dispose(GL3 gl3) {
-		shaderCode.destroy(gl3);
+		if (shaderCode != null)
+			shaderCode.destroy(gl3);
 	}
 	
 	@Override

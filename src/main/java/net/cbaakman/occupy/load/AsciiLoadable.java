@@ -1,13 +1,13 @@
-package net.cbaakman.occupy.resource;
+package net.cbaakman.occupy.load;
 
 import java.io.InputStream;
 import java.io.StringWriter;
 
 import org.apache.commons.io.IOUtils;
 
-public class AsciiResource extends FileDependentResource<String> {
+public class AsciiLoadable extends FileDependentLoadable<String> {
 		
-	public AsciiResource(String path) {
+	public AsciiLoadable(String path) {
 		super(path);
 	}
 

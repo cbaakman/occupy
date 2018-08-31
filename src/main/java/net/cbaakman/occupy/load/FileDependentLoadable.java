@@ -1,31 +1,31 @@
-package net.cbaakman.occupy.resource;
+package net.cbaakman.occupy.load;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 
 import com.jogamp.opengl.GL3;
 
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.load.LoadRecord;
 
-public abstract class FileDependentResource<T> implements Resource<T> {
+public abstract class FileDependentLoadable<T> implements Loadable<T> {
 	
-	Logger logger = Logger.getLogger(FileDependentResource.class);
+	Logger logger = Logger.getLogger(FileDependentLoadable.class);
 
 	private String path;
 	
-	public FileDependentResource(String path) {
+	public FileDependentLoadable(String path) {
 		this.path = path;
 	}
 
 	@Override
-	public final T init(GL3 gl3) throws InitError {
-		InputStream is = FileDependentResource.class.getResourceAsStream(path);
+	public final T load() throws InitError {
+		InputStream is = FileDependentLoadable.class.getResourceAsStream(path);
 		if (is == null)
 			throw new InitError(new FileNotFoundException(path));
 		
@@ -47,10 +47,6 @@ public abstract class FileDependentResource<T> implements Resource<T> {
 	@Override
 	public final Set<LoadRecord<?>> getDependencies() {
 		return new HashSet<LoadRecord<?>>();
-	}
-
-	@Override
-	public final void dispose(GL3 gl3) {
 	}
 	
 	@Override

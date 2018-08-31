@@ -1,4 +1,4 @@
-package net.cbaakman.occupy;
+package net.cbaakman.occupy.util;
 
 public abstract class WhileThread extends Thread {
 

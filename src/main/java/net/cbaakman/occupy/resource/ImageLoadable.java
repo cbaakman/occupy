@@ -6,9 +6,11 @@ import java.io.InputStream;
 
 import javax.imageio.ImageIO;
 
-public class ImageResource extends FileDependentResource<BufferedImage> {
+import net.cbaakman.occupy.load.FileDependentLoadable;
 
-	public ImageResource(String path) {
+public class ImageLoadable extends FileDependentLoadable<BufferedImage> {
+
+	public ImageLoadable(String path) {
 		super(path);
 	}
 

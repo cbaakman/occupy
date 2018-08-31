@@ -5,19 +5,19 @@ import java.nio.FloatBuffer;
 import com.jogamp.opengl.GL3;
 
 import net.cbaakman.occupy.errors.InitError;
-import net.cbaakman.occupy.errors.NotReadyError;
+import net.cbaakman.occupy.errors.NotLoadedError;
 import net.cbaakman.occupy.errors.SeriousError;
-import net.cbaakman.occupy.resource.Resource;
+import net.cbaakman.occupy.resource.GL3Resource;
 
 public class LoadRecord<T> {
 
-	private final Resource<T> resource;
+	private final Loadable<T> loadable;
 	
 	private final Loader loader;
 
-	public LoadRecord(Loader loader, Resource<T> resource) {
+	public LoadRecord(Loader loader, Loadable<T> resource) {
 		this.loader = loader;
-		this.resource = resource;
+		this.loadable = resource;
 	}
 	
 	private T result = null;
@@ -35,26 +35,26 @@ public class LoadRecord<T> {
 		this.result = result;
 	}
 	
-	public void run(GL3 gl3) {
+	public void run() {
 		try {
-			T result = resource.init(gl3);
+			T result = loadable.load();
 			
 			setResult(result);
 		}
 		catch (InitError e) {
 			setError(e);
-		} catch (NotReadyError e) {
+		} catch (NotLoadedError e) {
 			throw new SeriousError(e);
 		}
 	}
 
-	public synchronized T get() throws NotReadyError, InitError {
+	public synchronized T get() throws NotLoadedError, InitError {
 		
 		if (getError() != null)
 			throw getError();
 
 		if (getResult() == null)
-			throw new NotReadyError(resource);
+			throw new NotLoadedError(loadable);
 		
 		return getResult();
 	}
@@ -71,7 +71,7 @@ public class LoadRecord<T> {
 	 * Meaning: ready to run.
 	 */
 	public synchronized boolean isReady() {
-		for (LoadRecord<?> dependency : resource.getDependencies()) {
+		for (LoadRecord<?> dependency : loadable.getDependencies()) {
 			if (!dependency.isDone())
 				return false;
 		}
@@ -92,7 +92,7 @@ public class LoadRecord<T> {
 	
 	@Override
 	public String toString() {
-		return String.format("loadrecord-for-%s", resource.toString());
+		return String.format("loadrecord-for-%s", loadable.toString());
 	}	
 	
 	/**

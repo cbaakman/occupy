@@ -3,6 +3,8 @@ package net.cbaakman.occupy.scene;
 import java.awt.event.MouseWheelEvent;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.UUID;
 
@@ -12,6 +14,7 @@ import org.apache.log4j.Logger;
 
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.GLDrawable;
 import com.jogamp.opengl.math.FloatUtil;
 import com.jogamp.opengl.math.Quaternion;
 
@@ -27,11 +30,14 @@ import net.cbaakman.occupy.config.ClientConfig;
 import net.cbaakman.occupy.errors.CommunicationError;
 import net.cbaakman.occupy.errors.GL3Error;
 import net.cbaakman.occupy.errors.KeyError;
+import net.cbaakman.occupy.errors.InitError;
+import net.cbaakman.occupy.errors.NotLoadedError;
 import net.cbaakman.occupy.errors.SeriousError;
 import net.cbaakman.occupy.game.Camera;
 import net.cbaakman.occupy.game.Entity;
 import net.cbaakman.occupy.game.Infantry;
 import net.cbaakman.occupy.game.PlayerRecord;
+import net.cbaakman.occupy.load.Loader;
 import net.cbaakman.occupy.math.Vector3f;
 import net.cbaakman.occupy.render.GL3Cursor;
 import net.cbaakman.occupy.render.GL3Sprite2DRenderer;
@@ -39,7 +45,10 @@ import net.cbaakman.occupy.render.GameDefaultCursor;
 import net.cbaakman.occupy.render.entity.EntityRenderer;
 import net.cbaakman.occupy.render.entity.InfantryRenderer;
 import net.cbaakman.occupy.render.entity.EntityRenderRegistry;
-import net.cbaakman.occupy.resource.ResourceManager;
+import net.cbaakman.occupy.resource.GL3Resource;
+import net.cbaakman.occupy.resource.GL3ResourceInitializer;
+import net.cbaakman.occupy.resource.GL3ResourceManager;
+import net.cbaakman.occupy.resource.ResourceLinker;
 
 public class InGameScene extends ResourceUsingScene {
 	Logger logger = Logger.getLogger(InGameScene.class);
@@ -55,8 +64,7 @@ public class InGameScene extends ResourceUsingScene {
 
 	private SynchronizedPool<UUID, Updatable> updatables = new SynchronizedPool<UUID, Updatable>();
 	
-	private GL3Sprite2DRenderer render2d = new GL3Sprite2DRenderer();
-	private GL3Cursor cursor = new GameDefaultCursor(render2d);
+	private GameDefaultCursor cursor = new GameDefaultCursor();
 	
 	public InGameScene(Client client, PlayerRecord playerRecord) {
 		super(client);
@@ -68,17 +76,29 @@ public class InGameScene extends ResourceUsingScene {
 		camera.setOrientation(new Quaternion().rotateByAngleX((float)Math.toRadians(-45.0)));
 
 		entityRenderRegistry.registerForEntity(Infantry.class, new InfantryRenderer());
+	}
+	
+	@Override
+	public GL3ResourceInitializer pipeResources(Loader loader) throws InitError, NotLoadedError {
+				
+		final List<GL3ResourceInitializer> inits = new ArrayList<GL3ResourceInitializer>();
 		
-		ResourceManager resourceManager = getResourceManager();
-		
-		render2d.orderFrom(resourceManager);
-		cursor.orderFrom(resourceManager);
+		inits.add(cursor.pipeResources(loader));
 		for (EntityRenderer<?> renderer : entityRenderRegistry)
-			renderer.orderFrom(resourceManager);
+			inits.add(renderer.pipeResources(loader));
+		
+		return new GL3ResourceInitializer() {
+			@Override
+			public void run(GL3 gl3, GL3ResourceManager resourceManager) throws InitError, NotLoadedError {
+				for (GL3ResourceInitializer init : inits) {
+					init.run(gl3, resourceManager);
+				}
+			}
+		};
 	}
 
 	@Override
-	public synchronized void display(GLAutoDrawable drawable) {
+	public synchronized void render(GLAutoDrawable drawable) {
 		GL3 gl3 = drawable.getGL().getGL3();
 		
         try {	        
