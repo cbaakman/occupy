@@ -4,7 +4,7 @@ an occupation game
 # Requirements to build
 * maven 3 (https://maven.apache.org/download.cgi)
 * Python 3 (https://www.python.org/downloads/)
-* The xml mesh exporter (https://github.com/cbaakman/mesh-exporter)
+* The xml mesh exporter version 3.0 (https://github.com/cbaakman/mesh-exporter)
 * blender 2.79b (https://www.blender.org/download/)
 * gimp 2 (https://www.gimp.org/downloads/)
 * inkscape (https://inkscape.org/)
